@@ -47,3 +47,5 @@ skills/<name>/references/   optional depth, loaded only when the body points to 
 | skill | use it when |
 |---|---|
 | [`mining-session-logs`](skills/mining-session-logs/SKILL.md) | You have a pile of finished agent runs and want to know what they teach - recurring failures, wasted effort, cost concentration - written down so the lesson outlives the runs. |
+| [`syn-workflow`](skills/syn-workflow/SKILL.md) | You need to find a workflow, read what inputs it takes, start it with the right task and repositories, or register, update or archive it. |
+| [`execution-control`](skills/execution-control/SKILL.md) | A run has started and you need to follow it, cancel it, resume it, or find out why it failed before deciding what to do next. |
