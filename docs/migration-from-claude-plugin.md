@@ -301,6 +301,11 @@ main. What changed:
    the source. Added to the review table.
 10. `/syn-health`, `/syn-marketplace`, "use the security-reviewer agent",
     `argument-hint`, `model: sonnet`: Claude only. Removed.
+11. Reviewing and validating the cloned marketplace repository as the
+    package (caught in verification of this migration): a marketplace root
+    holds `marketplace.json` and package directories, and `syn workflow
+    validate` refuses it with "No workflow files found". The skill now
+    reviews and validates the entry's `source` path, which `info` prints.
 
 ### `organization-hierarchy` (from `organization` and `syn-repo`)
 
@@ -347,13 +352,22 @@ main. What changed:
    failure (#1081). The agent block forbids unknown keys, so it is rejected.
    Stated as Trap 3, with a wrong and right example.
 9. `$ARGUMENTS` source: stated only in passing. Stated as Trap 2, including
-   the refusal of `-t` when no prompt consumes the task.
+   the refusal of `-t` when no prompt consumes the task. The first draft of
+   this migration said only `-t` fills it (caught in verification):
+   `-i task=value` also does, `-t` wins when both are passed, and a
+   declared `task` default fills it when neither is.
 10. Not in the source and added: `max_tokens` rejected, `sandbox: read-only`
     refused, `execution_type` other than `sequential` rejected, reserved
     input names, `input_artifacts` must resolve, prompt file frontmatter
     merge, `shared://`, the `{{repos}}` and `{{<phase-id>}}` placeholders and
     the 2000 character cut, pinned plugin and skill references with
     `@latest` rejected.
+11. Scaffolding with `syn workflow init` and validating straight away
+    (caught in verification of this migration): every generated prompt file
+    carries `max-tokens: 4096` in its frontmatter, which is read as the
+    rejected `max_tokens`, so an untouched scaffold fails validation. The
+    skill tells authors to delete that line first. The generator itself
+    still needs fixing in the product.
 
 ## Verification against `syntropic137/syntropic137` main
 
@@ -400,6 +414,8 @@ API is `apps/syn-api/src/syn_api/`, abbreviated `api/`.
 | `syn workflow init [dir] -n -t --phases --multi` (phases/*.md, README.md; multi adds manifest and phase-library) | `cli/workflow/install.ts`, `apps/syn-cli-node/src/packages/resolver.ts` |
 | `syn workflow export <id> -f/--format package\|plugin -o/--output DIR --force` | `cli/workflow/export.ts` |
 | `syn workflow validate <file\|dir>` (file posted to `/workflows/validate`; directory resolved locally then each validated) | `cli/workflow/crud.ts` |
+| a marketplace root (`marketplace.json` plus `plugins/<name>/workflow.yaml`) is not a package: `detectFormat` raises "No workflow files found"; the entry directory resolves as `single`; `info` prints `Source: <repo> (<source>)` | `apps/syn-cli-node/src/packages/resolver.ts`, `cli/workflow/search.ts`; fixture run through `detectFormat` on main |
+| `syn workflow init` prompt template writes `max-tokens: 4096`; the scaffold fails `WorkflowDefinition.from_file` with `max_tokens is not supported` and passes once that line is removed (single and `--multi`) | `apps/syn-cli-node/src/packages/resolver.ts` (`PHASE_MD_TEMPLATE`); scaffold generated with `scaffoldSinglePackage` and `scaffoldMultiPackage` on main |
 | `syn org create -n -s`, `list`, `show`, `update`, `delete -f` | `cli/org.ts` |
 | `syn system create -n -d -o (required)`, `list -o`, `show`, `update`, `delete -f`, `status`, `cost`, `activity -n`, `patterns`, `history -n` | `cli/system.ts` |
 | `syn repo register -u -o` (single org auto-selected; `--system` parsed and not sent), `list -o -s`, `show`, `assign -s`, `unassign`, `health`, `cost`, `activity`, `failures`, `sessions` | `cli/repo.ts` |
@@ -458,6 +474,7 @@ API is `apps/syn-api/src/syn_api/`, abbreviated `api/`.
 | unknown `type` stored as `custom` | same file; `validate_workflow_yaml` returns valid for `type: bogus` |
 | plugin refs `org/repo@v`, `<url>@v`; skill refs `org/repo/skill@v`; `@latest` rejected | `.../orchestration/_shared/claude_plugin_ref.py`, `skill_ref.py` |
 | placeholders `{{execution_id}}`, `{{workflow_id}}`, `{{repo_url}}`, deprecated `{{repository}}`, inputs, `{{<phase-id>}}` and appendix cut to 2000, `$ARGUMENTS` from `task`; `{{repos}}` from `-R` | `apps/syn-api/src/syn_api/_wiring.py`; `WorkflowExecutionProcessor` |
+| `task` from `-t`, else `-i task=`, else the declared `task` default; `-t` wins over `-i task=`; with no task `$ARGUMENTS` renders empty and `{{task}}` stays literal | `cli/workflow/run.ts` (sends `inputs` and `task`); `api/routes/executions/commands.py` (`_merge_inputs`); `_wiring.py` (`_substitute_inputs`), called directly on main |
 | assign refused when already assigned; unassign refused when unassigned; duplicate registration refused | organization context repo aggregate; `api/routes/repos.py` (409) |
 | no automatic repo registration from GitHub events | `POST /repos` is the only registration route; `syn repo register` its only caller |
 

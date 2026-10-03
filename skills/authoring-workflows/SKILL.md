@@ -81,16 +81,19 @@ not be cloned" and the repository is never checked out.
 Repositories are never inputs. Do not declare an input named `repos` or
 `repository`: both names are reserved and the definition is rejected.
 
-### Trap 2: `$ARGUMENTS` is fed by `-t`, and only by `-t`
+### Trap 2: `$ARGUMENTS` is the task, from `-t` or `-i task=`
 
-`$ARGUMENTS` and `{{task}}` both render the task the caller passes with
-`-t/--task`. Nothing else fills them: not `-i`, not a positional argument.
+`$ARGUMENTS` and `{{task}}` both render the task. The caller supplies it with
+`-t/--task` (preferred) or `-i task=value`; if both are passed, `-t` wins. A
+`default` on a declared input named `task` fills it when neither is passed.
+Nothing else does: not another input, not a positional argument.
 
 - A workflow whose prompts never mention `$ARGUMENTS` or `{{task}}` does not
   take a task. `syn workflow run ... -t "..."` is then **refused**, because the
   task would be thrown away.
-- A workflow that consumes the task but is run without `-t` renders it empty
-  (the CLI warns), unless an input named `task` has a `default`.
+- A workflow that consumes the task but is run without one (no `-t`, no
+  `-i task=`, no `default`) still dispatches; the CLI warns. `$ARGUMENTS`
+  renders empty and `{{task}}` is left in the prompt as literal text.
 
 If the workflow is meant to take a task, put `$ARGUMENTS` in the first
 phase's prompt.
@@ -145,6 +148,19 @@ referenced by `prompt_file`, and a `README.md`. `--multi` lays out
 `workflows/<name>/workflow.yaml` with a shared `phase-library/` and a
 `syntropic137-plugin.json` manifest.
 
+**Delete the `max-tokens: 4096` line from every generated prompt file**
+(each `phases/*.md`, and `phase-library/*.md` with `--multi`) before you
+validate. The scaffold writes it into each file's frontmatter, it is read as
+`max_tokens`, and `max_tokens` is rejected, so an untouched scaffold fails
+validation:
+
+```bash
+grep -rn '^max-tokens:' ./pr-review     # must print nothing before you validate
+```
+
+The other generated frontmatter keys (`model`, `argument-hint`,
+`allowed-tools`, `timeout-seconds`) validate as written.
+
 ### 2. Write the workflow level
 
 | key | required | notes |
@@ -176,8 +192,9 @@ inputs:
 ```
 
 Each input takes `name`, `description`, `required` (default true) and
-`default` (a string). Callers pass inputs with `-i name=value`, except
-`task`, which is `-t`. Reference each input in a prompt as `{{name}}`.
+`default` (a string). Callers pass inputs with `-i name=value`; `task` is
+usually passed with `-t`, which wins over `-i task=`. Reference each input in
+a prompt as `{{name}}`.
 
 ### 4. Write each phase
 
@@ -239,7 +256,7 @@ cannot resolve the references (see syn-workflow).
 
 | placeholder | renders |
 |---|---|
-| `$ARGUMENTS`, `{{task}}` | the task from `-t` |
+| `$ARGUMENTS`, `{{task}}` | the task from `-t`, or `-i task=` when `-t` is absent |
 | `{{name}}` | the declared input `name` |
 | `{{repo_url}}` | the HTTPS URL of the repository |
 | `{{repos}}` | every `-R` repository, as comma separated HTTPS URLs |
