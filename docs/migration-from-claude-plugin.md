@@ -2,12 +2,15 @@
 
 This document inventories every artifact in the Claude Code plugin
 (`syntropic137/syntropic137-claude-plugin`), gives each one a single
-disposition and a destination, and records how the two skills migrated so far
-were checked against the product.
+disposition and a destination, and records how each migrated skill was
+checked against the product.
 
 Inventory taken at plugin commit `e65ca7514baa8033156bd4b68566d5d99c994f02`
 (plugin version `0.12.4`). Product surface checked against
-`syntropic137/syntropic137` `main` at `366db9c0e7817b3e58f57285d25067bc5bab4bde`.
+`syntropic137/syntropic137` `main` at `366db9c0e7817b3e58f57285d25067bc5bab4bde`
+for `syn-workflow` and `execution-control`, and at
+`c1ab5a4b` (no product-surface change since `366db9c`) for
+`observing-sessions`, `discovering-run-sessions` and `github-triggers`.
 
 ## Dispositions
 
@@ -31,15 +34,15 @@ only (see the README).
 | `skills/execution-control/SKILL.md` | **migrate (this PR)** | `skills/execution-control/SKILL.md` | Rewritten. Stale items corrected below. |
 | `skills/syn-control/SKILL.md` | **merge (this PR)** | `skills/execution-control/SKILL.md` | Its cancel, stop, status and resume content overlapped entirely with execution-control. |
 | `skills/troubleshooting-workflow-failures/SKILL.md` | **merge**, split in two | The diagnostic flow (read the execution, classify the failure, read the session, decide): merged into `skills/execution-control/SKILL.md` step 6 (this PR). `just health-check`, `just workspace-build` and local-stack fixes: move to contributor docs, `syntropic137/syntropic137` `docs/` | Only the steps that work against a deployed system were kept. |
-| `skills/observability/SKILL.md` | **migrate** (later) | `skills/observing-sessions/SKILL.md` | Session, tool, token and cost observation through `syn sessions`, `syn observe`, `syn costs`. The two-lane architecture and event pipeline internals move to contributor docs. |
-| `skills/syn-insights/SKILL.md` | **merge** (later) | `skills/observing-sessions/SKILL.md` | Same surface as observability, CLI-shaped. |
-| `skills/session-discovery/SKILL.md` | **migrate** (later) | `skills/discovering-run-sessions/SKILL.md` | Finding every session of a run (`syn execution sessions`, transcripts). Its learning-loop section is **retired** in favour of `skills/mining-session-logs`, which already owns that job; no competing session-mining skill is created. |
+| `skills/observability/SKILL.md` | **migrated** | `skills/observing-sessions/SKILL.md` | Rewritten. Session, tool, token and cost observation through `syn sessions`, `syn observe`, `syn costs`, `syn metrics`. The two-lane architecture and event pipeline internals move to contributor docs. Stale items corrected below. |
+| `skills/syn-insights/SKILL.md` | **merged** | `skills/observing-sessions/SKILL.md` | Same surface as observability, CLI-shaped. `syn insights` is in the skill's view table. |
+| `skills/session-discovery/SKILL.md` | **migrated** | `skills/discovering-run-sessions/SKILL.md` | Rewritten. Finding every session of a run (`syn execution sessions`, transcripts). Its learning-loop section is **retired** in favour of `skills/mining-session-logs`, which already owns that job; no competing session-mining skill is created. |
 | `skills/marketplace/SKILL.md` | **migrate** (later) | `skills/workflow-marketplace/SKILL.md` | Marketplace search, info, install and review before install. |
 | `skills/syn-marketplace/SKILL.md` | **merge** (later) | `skills/workflow-marketplace/SKILL.md` | CLI-shaped duplicate of marketplace. |
 | `skills/organization/SKILL.md` | **migrate** (later) | `skills/organization-hierarchy/SKILL.md` | Organizations, systems, repos. |
 | `skills/syn-repo/SKILL.md` | **merge** (later) | `skills/organization-hierarchy/SKILL.md` | CLI-shaped subset of organization. |
-| `skills/github-automation/SKILL.md` | **migrate** (later) | `skills/github-triggers/SKILL.md` | Trigger rules and their history through `syn triggers` and the API. Webhook tunnelling, smee and `just` recipes move to contributor docs. |
-| `skills/syn-triggers/SKILL.md` | **merge** (later) | `skills/github-triggers/SKILL.md` | CLI-shaped subset of github-automation. |
+| `skills/github-automation/SKILL.md` | **migrated** | `skills/github-triggers/SKILL.md` | Rewritten. Trigger rules and their history through `syn triggers` and the API. GitHub App installation, webhook tunnelling, Smee and `just` recipes move to contributor docs. Stale items corrected below. |
+| `skills/syn-triggers/SKILL.md` | **merged** | `skills/github-triggers/SKILL.md` | CLI-shaped subset of github-automation. |
 | `skills/platform-ops/SKILL.md` | **move to contributor docs** | `syntropic137/syntropic137` `docs/` | Operating the platform's own stack (Docker Compose, `just`, service internals) is contributor knowledge, not product use. |
 | `skills/setup/SKILL.md` | **split** | Dev-environment setup: move to contributor docs. Self-host install: stays with the plugin's `/syn-setup` adapter and the public docs site. Connection prerequisites (`SYN_API_URL`, credentials, `syn config show`, `syn health`): carried in the "Before you start" section of every migrated skill (this PR does so for both) | A consumer skill cannot run an installer that needs secrets typed outside the agent's context; the plugin's `!`-prefixed pattern is Claude-specific. |
 
@@ -57,11 +60,11 @@ in the plugin repo; only those marked *verified* were checked in this PR.
 | `commands/syn-executions.md` | keep as harness adapter | `skills/execution-control` | Maps `status <id>` to `syn workflow status <id>`, which takes a workflow id, not an execution id; its fallback `/api/v1/executions/<id>/status` does not exist (*verified*). Use `syn execution show` or `/executions/<id>/state`. |
 | `commands/syn-status.md` | keep as harness adapter | `skills/execution-control`, `skills/observing-sessions` | Not verified in this PR. |
 | `commands/syn-health.md` | keep as harness adapter | every skill's "Before you start" (`syn health`) | Not verified in this PR. |
-| `commands/syn-sessions.md` | keep as harness adapter | `skills/observing-sessions` (later) | Not verified in this PR. |
-| `commands/syn-observe.md` | keep as harness adapter | `skills/observing-sessions` (later) | Not verified in this PR. |
-| `commands/syn-costs.md` | keep as harness adapter | `skills/observing-sessions` (later) | Not verified in this PR. |
-| `commands/syn-metrics.md` | keep as harness adapter | `skills/observing-sessions` (later) | Not verified in this PR. |
-| `commands/syn-triggers.md` | keep as harness adapter | `skills/github-triggers` (later) | Not verified in this PR. |
+| `commands/syn-sessions.md` | keep as harness adapter | `skills/observing-sessions` | The command itself was not verified; the stale items found in the observability skill below are likely to recur in it. |
+| `commands/syn-observe.md` | keep as harness adapter | `skills/observing-sessions` | The command itself was not verified; the stale items found in the observability skill below are likely to recur in it. |
+| `commands/syn-costs.md` | keep as harness adapter | `skills/observing-sessions` | The command itself was not verified; the stale items found in the observability skill below are likely to recur in it. |
+| `commands/syn-metrics.md` | keep as harness adapter | `skills/observing-sessions` | The command itself was not verified; the stale items found in the observability skill below are likely to recur in it. |
+| `commands/syn-triggers.md` | keep as harness adapter | `skills/github-triggers` | The command itself was not verified. Its sibling skill used `--name`, `--event`, `--repository`, `--budget`, `--max-fires` and `pause --reason`, none of which exist (*verified*, see below); check the command for the same. |
 | `commands/syn-marketplace.md` | keep as harness adapter | `skills/workflow-marketplace` (later) | Not verified in this PR. |
 | `commands/syn-setup.md` | keep as harness adapter | public docs; contributor docs for the dev path | Uses Claude's `!` external-execution prefix so secrets never enter the context window. That property is the reason it must stay Claude-specific. |
 
@@ -165,10 +168,111 @@ Each of these was in the plugin source and would have been wrong if copied.
     explained; the `Deliverable` and `Side effects` outcome lines; and
     `failure_classification` versus `reported_failure_reason`.
 
+### `observing-sessions` (from `observability` and `syn-insights`)
+
+1. `syn costs execution <workflow-id>`: the argument is an **execution** id.
+2. The tool timeline described as showing each tool's input and output:
+   `syn observe tools` shows time, tool, duration and ok or error only. Input
+   and output are `operations[].tool_input` and `tool_output` in
+   `GET /sessions/{id}`.
+3. `TOOL_BLOCKED` in `syn observe tools`: a blocked call is the `tool_blocked`
+   operation type in `syn sessions show`.
+4. Token fields `total_input_tokens` and `total_output_tokens`: the
+   observability tokens response uses `input_tokens` and `output_tokens`.
+5. `unpriced_tokens` and `vendor_cost_usd` as fields to read: neither is in
+   any cost response. The API has `unpriced_observation_count` and
+   `unpriced_by_phase`; the CLI shows `unpriced` or `>=$X (partial)`.
+6. "A codex phase with no model is unpriced": an unset codex model is given
+   the platform's default codex model when the workflow is installed, and is
+   priced as that. Unpriced means the model that ran has no rate.
+7. "Default pricing $0.01 per 1K input, $0.03 per 1K output": no such
+   default exists. Removed.
+8. `syn insights overview` described as calling `/organizations/overview` and
+   showing executions and costs: it calls `/insights/overview` and shows
+   systems, repos, unassigned repos and active executions.
+9. `syn artifacts content --raw`: no such flag.
+10. `syn sessions list --workflow` returning "most recent first": the order
+    was not confirmed. Dropped.
+11. The two-lane architecture and event pipeline internals (hook watcher,
+    collector port, TimescaleDB, projections, SHA-256 dedup): contributor
+    material. Removed.
+12. Slash commands `/syn-insights`, `/syn-control`, `/syn-health`: replaced
+    with skills and `syn health`.
+13. `argument-hint` and `model: sonnet` frontmatter: removed.
+14. `curl http://localhost:8137/...` with no auth: replaced with
+    `$SYN_API_URL/api/v1` and an `Authorization` header.
+15. "Compare opus versus sonnet in `cost_by_model`": the keys are the model ids
+    the harness reported, and cost with no reported model is under
+    `unattributed-model`. `tokens_by_tool` is API-only and an estimate.
+
+### `discovering-run-sessions` (from `session-discovery`)
+
+The plugin skill's commands, flags, statuses and routes were all found on
+main. What changed:
+
+1. The learning-loop section: retired in favour of `mining-session-logs`.
+2. Pointers to the troubleshooting-workflow-failures, workflow-management and
+   observability skills: replaced with `execution-control`,
+   `observing-sessions` and `mining-session-logs`.
+3. `summary.complete` and the CLI's top-level `complete` were used
+   interchangeably: the first is the server's coverage verdict, the second
+   adds that this read covered every section unfiltered. The skill now
+   distinguishes them.
+4. `syn execution sessions --refresh` was not mentioned; it is the one
+   inventory command that writes. Documented as such.
+5. A sentence the first draft of this migration added, that nodes carry a
+   `confidence`, was wrong: only edges, memberships and bindings do. Fixed
+   before commit.
+
+### `github-triggers` (from `github-automation` and `syn-triggers`)
+
+1. `syn triggers register --name --event --repository --max-fires --budget`:
+   the flags are `-r/--repo`, `-w/--workflow`, `-e/--event`,
+   `-c/--condition`, `--max-attempts` and `--cooldown`. There is no name,
+   budget or max-fires flag; the CLI generates the name.
+2. `budget_per_trigger_usd` as a safety limit: no such field. A trigger has no
+   spend limit.
+3. `--event pull_request --condition action=opened`: the platform matches the
+   compound `pull_request.opened` exactly. That rule would never fire.
+4. `--condition base.ref=main`: conditions are paths from the payload root,
+   so `pull_request.base.ref`.
+5. `"operator": "equals"`: the operator is `eq`. The full set is `eq`, `neq`,
+   `in`, `not_in`, `contains`, `not_empty`, `is_empty`.
+6. The CLI shown setting input mapping implicitly: `syn triggers register`
+   sends no `input_mapping` and a fixed `daily_limit` of 20. Mapping, other
+   operators and other limits are `POST /triggers`.
+7. "`{{repository}}` in the template's `repository.url` clones the triggering
+   repo": an input named `repository` holding `owner/repo` becomes the run's
+   repository. The template claim is removed.
+8. "Check `syn triggers history` for what was passed as inputs": history does
+   not record inputs. They are the execution's `inputs` in
+   `GET /executions/{id}`.
+9. `syn triggers pause <id> --reason`: the CLI has no `--reason`. The API's
+   `PATCH /triggers/{id}` accepts one.
+10. `syn triggers list --repository` and `enable <name> --repository`: the flag
+    is `-r/--repo`.
+11. `curl -X DELETE http://localhost:8137/...` "if the CLI doesn't support
+    delete": it does, with `--force`. Removed.
+12. "Supported events: push, pull_request, issues, issue_comment, check_run,
+    workflow_run": `workflow_run` arrives only by webhook, `check_run` by
+    webhook or Checks API polling. The skill now says which events need a
+    reachable webhook URL.
+13. Guards listed as concurrency, max_attempts, cooldown, daily_limit: the
+    full set also has `idempotency` and `dispatch_rate_limit`. The
+    `cross_trigger_cooldown` guard exists but its window is 0, so it never
+    blocks; the skill says rules do not block each other. Production wires no
+    debouncer, so a retryable block is recorded, not retried later.
+14. GitHub App setup (`npx @syntropic137/setup github-app`, `just onboard-dev`,
+    `just setup-stage`, `just dev-webhooks`), Smee and the Cloudflare tunnel:
+    deployment and contributor setup, not product use. Removed.
+15. `TriggerRuleAggregate` in the flow diagram: internal. Removed.
+16. `/syn-triggers`, `/syn-health`, `argument-hint`, `model: sonnet`:
+    removed.
+
 ## Verification against `syntropic137/syntropic137` main
 
-Every command, flag, endpoint and response field the two skills name, with
-where it was found. Paths are in `syntropic137/syntropic137` at the commit
+Every command, flag, endpoint and response field the migrated skills name,
+with where it was found. Paths are in `syntropic137/syntropic137` at the commit
 above. The CLI is `apps/syn-cli-node/src/commands/`, abbreviated `cli/`. The
 API is `apps/syn-api/src/syn_api/`, abbreviated `api/`.
 
@@ -190,9 +294,16 @@ API is `apps/syn-api/src/syn_api/`, abbreviated `api/`.
 | `syn execution sessions --all --json --phase` | `cli/execution-sessions.ts` |
 | `syn control cancel -r -f`, `stop -r -f`, `status`, `inject -m` | `cli/control.ts` |
 | `syn watch execution`, `syn watch activity` | `cli/watch.ts` |
-| `syn sessions list --execution`, `syn sessions show` (operation type, error) | `cli/sessions.ts` |
-| `syn observe tools`, `syn observe tokens` | `cli/observe.ts` |
-| `syn artifacts show`, `syn artifacts content` | `cli/artifacts.ts` |
+| `syn sessions list --execution -w/--workflow -s/--status -n/--limit`, `syn sessions show` (status, provider, model, tokens, cost, error, operations) | `cli/sessions.ts` |
+| `syn observe tools <session-id> --limit` (time, tool, duration, ok or error), `syn observe tokens` (input, output, total, cache creation, cache read, estimated cost) | `cli/observe.ts` |
+| `syn costs summary`, `sessions [-e]`, `session`, `executions`, `execution <execution-id>`; `unpriced` and `>=$X (partial)` display | `cli/costs.ts` |
+| `syn metrics show [-w]` | `cli/metrics.ts` |
+| `syn insights overview`, `cost`, `heatmap [-d]` (calls `/insights/...`) | `cli/insights.ts` |
+| `syn artifacts list -w`, `show`, `content` (no `--raw`) | `cli/artifacts.ts` |
+| `syn execution sessions --all --json --kind --phase --attempt --limit --max-pages --cursor --require-complete --refresh --idempotency-key`; top-level `complete`, `coverage_complete`, `traversal_complete`, `pending_sections` | `cli/execution-sessions.ts`, `cli/execution-sessions-view.ts` |
+| `syn execution transcript <execution-id> <harness> <native-id> <hash> --raw --json`; nonzero on `not_captured`, `missing`, `expired`, `deleted`, `too_large` | `cli/execution-transcript.ts` |
+| `syn triggers register -r -w -e -c --max-attempts (5) --cooldown (300)`, sends no `input_mapping`, `daily_limit` 20; `enable <preset> -r [-w]`; `list -r -s -a`; `show`; `history -n`; `pause`, `resume` (no `--reason`); `delete -f`; `disable-all -r -f` | `cli/triggers.ts` |
+| `syn github repos [-i] [--include-private]` | `cli/github.ts` |
 | `syn repo list` | `cli/repo.ts` |
 
 ### API
@@ -208,7 +319,16 @@ API is `apps/syn-api/src/syn_api/`, abbreviated `api/`.
 | `ResumeStartInfo` statuses `pending`, `paused`, `retryable`, `dispatched`, `started`, `failed`; `status_reason`, `attempts`, `max_attempts` | `api/routes/executions/models.py` |
 | `POST /executions/{id}/cancel`, `POST /executions/{id}/inject`, `GET /executions/{id}/state` (no `/status` route) | `api/routes/executions/control.py` |
 | `POST /executions/{id}/resume` body and response fields | `api/routes/executions/resume.py` |
-| `GET /executions/{id}/session-inventory` | `api/routes/executions/inventory.py` |
+| `GET /executions/{id}/session-inventory`; `/{snapshot_id}/{kind}` with `limit` (up to 500), `cursor`, `phase_id`, `attempt_id`, `410 cursor_expired`; `/{snapshot_id}/nodes/{node_key}` | `api/routes/executions/inventory.py`, `inventory_cursor.py`, `inventory_summary.py` |
+| `GET /executions/{id}/session-transcripts/{archive_sha256}?harness&native_id`; `status`, `content_format`, `size`, `content_base64`, `conversation` | `api/routes/executions/transcripts.py` |
+| `GET /sessions` params `workflow_id`, `execution_id`, `status`, `statuses`, `started_after`, `started_before`, `q`, `page`, `page_size`; `parent_session_id`, `root_session_id`; `GET /sessions/{id}` `operations[]` with `tool_input`, `tool_output` | `api/routes/sessions.py`, `api/types.py` |
+| `GET /observability/sessions/{id}/tools` (`executions[]`), `/tokens` (`input_tokens`, `output_tokens`, `total_tokens`, `cache_creation_tokens`, `cache_read_tokens`, `total_cost_usd`) | `api/routes/observability.py` |
+| `GET /costs/sessions/{id}` (`cost_by_model`, `cost_by_tool`, `tokens_by_tool`, `unpriced_observation_count`, `unmeasured_fields`), `GET /costs/executions/{id}` (`cost_by_phase`, `unpriced_by_phase`, `is_complete`), `GET /costs/sessions`, `/costs/executions`, `/costs/summary`; `unattributed-model` key | `api/routes/costs.py` |
+| `GET /metrics?workflow_id` | `api/routes/metrics.py` |
+| `GET /insights/overview`, `/insights/cost`, `/insights/contribution-heatmap` | `api/routes/insights.py` |
+| `POST /triggers` (`name`, `event`, `repository`, `workflow_id`, `conditions[]` with string `value`, `input_mapping`, `config` defaults 3 / 20 / 300); `POST /triggers/presets/{preset_name}` (duplicate name and event refused); `PATCH /triggers/{id}` `action` `pause`/`resume`, `reason`; `DELETE /triggers/{id}` | `api/routes/triggers/commands.py` |
+| `GET /triggers?repository&status`, `GET /triggers/{id}` (`fire_count`, `conditions`, `input_mapping`, `config`, `last_fired_at`), `GET /triggers/{id}/history` (`entries[]`: `fired_at`, `execution_id`, `event_type`, `pr_number`, `status`, `cost_usd`, `guard_name`, `block_reason`) | `api/routes/triggers/queries.py` |
+| `ExecutionDetailResponse.inputs` | `api/routes/executions/models.py` |
 
 ### Domain behaviour the skills state
 
@@ -221,6 +341,14 @@ API is `apps/syn-api/src/syn_api/`, abbreviated `api/`.
 | inject not delivered | `CancelSignalPoller` acts only on `CANCEL`; `inject_message` is written and read by the Redis control adapter and read nowhere else in `packages`, `apps` or `lib` |
 | `tool_blocked` operation type | `packages/syn-domain/.../agent_sessions/_shared/value_objects.py` |
 | install provenance refusals and messages | `packages/syn-domain/.../aggregate_workflow_template/errors.py` |
+| unset codex model defaulted at install (`SYN_DEFAULT_CODEX_MODEL`) | `packages/syn-shared/src/syn_shared/agents.py`, `settings/config.py` |
+| gap reasons; coverage states; settlement grace default 1800 s | `packages/syn-domain/.../agent_sessions/domain/services/gap_reasons.py`, `coverage_settlement.py`; `packages/syn-shared/src/syn_shared/settings/session_inventory.py` |
+| webhook event matched as `<event>.<action>`, repository as `repository.full_name` | `api/routes/webhooks/handlers.py` |
+| condition operators; `"true"`/`"false"` coerced; `in` takes a comma-separated string; dot paths with `[n]`; unresolved input paths dropped | `packages/syn-domain/.../github/slices/evaluate_webhook/condition_evaluator.py`, `aggregate_trigger/TriggerCondition.py` |
+| guards `max_attempts`, `cooldown`, `daily_limit`, `idempotency`, `cross_trigger_cooldown` (window 0), `concurrency`, `dispatch_rate_limit`; no debouncer wired in production | `.../evaluate_webhook/safety_guards.py`, `EvaluateWebhookHandler.py`; `apps/syn-api/src/syn_api/_wiring.py` |
+| presets `self-healing`, `review-fix`, `comment-command`: events, conditions, input mappings, limits, default workflow `self-heal-pr` | `packages/syn-domain/.../github/_shared/trigger_presets.py` |
+| polled versus webhook-only events | `packages/syn-domain/.../github/_shared/event_availability.py` |
+| an input named `repository` becomes the run's repository | `packages/syn-domain/.../github/slices/dispatch_triggered_workflow/projection.py` |
 
 ## Harness discovery
 

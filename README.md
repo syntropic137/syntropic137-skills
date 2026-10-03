@@ -49,3 +49,6 @@ skills/<name>/references/   optional depth, loaded only when the body points to 
 | [`mining-session-logs`](skills/mining-session-logs/SKILL.md) | You have a pile of finished agent runs and want to know what they teach - recurring failures, wasted effort, cost concentration - written down so the lesson outlives the runs. |
 | [`syn-workflow`](skills/syn-workflow/SKILL.md) | You need to find a workflow, read what inputs it takes, start it with the right task and repositories, or register, update or archive it. |
 | [`execution-control`](skills/execution-control/SKILL.md) | A run has started and you need to follow it, cancel it, resume it, or find out why it failed before deciding what to do next. |
+| [`observing-sessions`](skills/observing-sessions/SKILL.md) | You need to know what an agent session did, why it failed, or why a run cost what it did, broken down by phase, model, tool and cache. |
+| [`discovering-run-sessions`](skills/discovering-run-sessions/SKILL.md) | You need every session of one run, including delegates and native transcripts, with whether the list is known to be complete. |
+| [`github-triggers`](skills/github-triggers/SKILL.md) | You want a workflow to run on GitHub events, or need to know why a trigger did or did not fire. |
