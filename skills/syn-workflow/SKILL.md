@@ -97,6 +97,8 @@ syn workflow list --include-archived  # also archived (deleted) templates
 syn workflow packages                 # packages this machine installed, with version and source
 ```
 
+`syn workflow list` prints ONE page of `GET /workflows` and does not paginate. Before concluding a workflow is absent, try `syn workflow show <workflow-id>`, or page the HTTP endpoint (`page=N&page_size=100`, see below) until a page comes back short.
+
 `packages` reads local install history (under `~/.syntropic137/workflows/`,
 or `$SYN_CONFIG_DIR`), not the deployment. A package can be listed there and
 missing from the deployment, or the reverse.

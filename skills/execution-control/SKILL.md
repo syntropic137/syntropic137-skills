@@ -248,7 +248,7 @@ Then decide:
 | `platform` failure, the phase never really ran | resume |
 | `task` failure: wrong instructions, missing input, the agent could not do it | fix the task or inputs and start a new run with syn-workflow; resume repeats the same instructions |
 | `correct_refusal` or `refused` | the agent was right to stop; change what was asked, not how often |
-| `reported_side_effects` is `denied` | grant the missing permission, then resume with `--acknowledge-external-effects` if the phase must run again |
+| `reported_side_effects` is `denied` | read the actual refusal first (the phase error and session): `denied` also covers a protected branch or a read-only token, not only a missing App permission. Fix that cause, then resume with `--acknowledge-external-effects` if the phase must run again |
 | deliverable produced, status failed | read the artifact before re-running anything |
 | cause still unclear | report the execution id, the failing phase, its error, and its session id to the deployment's operator rather than retrying |
 
