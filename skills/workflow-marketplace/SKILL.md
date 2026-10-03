@@ -132,8 +132,21 @@ read it. Do not install to inspect.
 
 ```bash
 tmp=$(mktemp -d)
-git clone --depth=1 --branch <ref> https://github.com/org/repo.git "$tmp/pkg"
+git clone --depth=1 --branch <ref> https://github.com/org/repo.git "$tmp/repo"
 ```
+
+`info` prints the source as `org/repo (./plugins/pr-review)`: the repository,
+then the entry's `source` path inside it. The package is that path, not the
+repository root. A marketplace root holds only `marketplace.json` and the
+package directories, so validation of the root fails with "No workflow files
+found". Point at the entry:
+
+```bash
+pkg="$tmp/repo/plugins/pr-review"    # the path in parentheses from `info`
+```
+
+When you install straight from a repository with no marketplace, the package
+is the repository root: use `pkg="$tmp/repo"`.
 
 A package is one of three layouts: `workflows/<name>/workflow.yaml` (several
 workflows), a single `workflow.yaml`, or loose `*.yaml` files. It may carry a
@@ -148,7 +161,7 @@ Read every prompt, and check:
 |---|---|
 | shell injection | `curl` or `wget` to outside hosts, `eval`, piping to `sh` or `bash`, commands unrelated to the stated purpose |
 | credential exfiltration | reading `.env` files, tokens or environment variables, then sending them anywhere |
-| encoded payloads | long base64 or hex strings: `grep -rE '[A-Za-z0-9+/]{40,}={0,2}' "$tmp/pkg"` |
+| encoded payloads | long base64 or hex strings: `grep -rE '[A-Za-z0-9+/]{40,}={0,2}' "$pkg"` |
 | prompt injection | instructions to ignore rules, override the system prompt, or claim elevated permission |
 | data exfiltration | uploading code, logs or repository content to an outside service |
 | declared vs instructed | a phase whose `allowed_tools` and prompt disagree about what it does |
@@ -159,11 +172,13 @@ Read every prompt, and check:
 Validate each workflow against the deployment without registering it:
 
 ```bash
-syn workflow validate "$tmp/pkg"     # resolves prompt_file locally, then validates each workflow
+syn workflow validate "$pkg"     # resolves prompt_file locally, then validates each workflow
 ```
 
 Validate the package directory rather than a single `workflow.yaml` inside
-it: a lone file cannot resolve its `prompt_file` references.
+it: a lone file cannot resolve its `prompt_file` references. Validate the
+package directory rather than the marketplace root, too: the root is not a
+package.
 
 Report the review as: source and ref, workflows and phases reviewed, a table
 of findings (severity, file, detail), a declared vs instructed table per
