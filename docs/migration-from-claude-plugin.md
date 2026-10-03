@@ -10,7 +10,9 @@ Inventory taken at plugin commit `e65ca7514baa8033156bd4b68566d5d99c994f02`
 `syntropic137/syntropic137` `main` at `366db9c0e7817b3e58f57285d25067bc5bab4bde`
 for `syn-workflow` and `execution-control`, and at
 `c1ab5a4b` (no product-surface change since `366db9c`) for
-`observing-sessions`, `discovering-run-sessions` and `github-triggers`.
+`observing-sessions`, `discovering-run-sessions` and `github-triggers`,
+and at `8901e12c1294be75d8cd7e9e71af57859789475b` for `workflow-marketplace`,
+`organization-hierarchy` and `authoring-workflows`.
 
 ## Dispositions
 
@@ -30,17 +32,17 @@ only (see the README).
 | plugin path | disposition | destination | notes |
 |---|---|---|---|
 | `skills/syn-workflow/SKILL.md` | **migrate (this PR)** | `skills/syn-workflow/SKILL.md` | Rewritten. Stale items corrected below. |
-| `skills/workflow-management/SKILL.md` | **merge**, split in two | CLI usage, registering and updating in place, the provenance refusals: merged into `skills/syn-workflow/SKILL.md` (this PR). YAML schema, phase design and prompt authoring: migrate later to `skills/authoring-workflows/SKILL.md` | The schema half needs its own verification against the workflow schema and was deliberately left out of this PR rather than carried over unchecked. |
+| `skills/workflow-management/SKILL.md` | **merge**, split in two | CLI usage, registering and updating in place, the provenance refusals: merged into `skills/syn-workflow/SKILL.md` (this PR). YAML schema, phase design and prompt authoring: **migrated** to `skills/authoring-workflows/SKILL.md` | Every schema key in the authoring half was checked against the workflow definition models on main; see "Stale instructions corrected" for what changed. |
 | `skills/execution-control/SKILL.md` | **migrate (this PR)** | `skills/execution-control/SKILL.md` | Rewritten. Stale items corrected below. |
 | `skills/syn-control/SKILL.md` | **merge (this PR)** | `skills/execution-control/SKILL.md` | Its cancel, stop, status and resume content overlapped entirely with execution-control. |
 | `skills/troubleshooting-workflow-failures/SKILL.md` | **merge**, split in two | The diagnostic flow (read the execution, classify the failure, read the session, decide): merged into `skills/execution-control/SKILL.md` step 6 (this PR). `just health-check`, `just workspace-build` and local-stack fixes: move to contributor docs, `syntropic137/syntropic137` `docs/` | Only the steps that work against a deployed system were kept. |
 | `skills/observability/SKILL.md` | **migrated** | `skills/observing-sessions/SKILL.md` | Rewritten. Session, tool, token and cost observation through `syn sessions`, `syn observe`, `syn costs`, `syn metrics`. The two-lane architecture and event pipeline internals move to contributor docs. Stale items corrected below. |
 | `skills/syn-insights/SKILL.md` | **merged** | `skills/observing-sessions/SKILL.md` | Same surface as observability, CLI-shaped. `syn insights` is in the skill's view table. |
 | `skills/session-discovery/SKILL.md` | **migrated** | `skills/discovering-run-sessions/SKILL.md` | Rewritten. Finding every session of a run (`syn execution sessions`, transcripts). Its learning-loop section is **retired** in favour of `skills/mining-session-logs`, which already owns that job; no competing session-mining skill is created. |
-| `skills/marketplace/SKILL.md` | **migrate** (later) | `skills/workflow-marketplace/SKILL.md` | Marketplace search, info, install and review before install. |
-| `skills/syn-marketplace/SKILL.md` | **merge** (later) | `skills/workflow-marketplace/SKILL.md` | CLI-shaped duplicate of marketplace. |
-| `skills/organization/SKILL.md` | **migrate** (later) | `skills/organization-hierarchy/SKILL.md` | Organizations, systems, repos. |
-| `skills/syn-repo/SKILL.md` | **merge** (later) | `skills/organization-hierarchy/SKILL.md` | CLI-shaped subset of organization. |
+| `skills/marketplace/SKILL.md` | **migrated** | `skills/workflow-marketplace/SKILL.md` | Marketplace search, info, install and review before install. |
+| `skills/syn-marketplace/SKILL.md` | **merged** | `skills/workflow-marketplace/SKILL.md` | CLI-shaped duplicate of marketplace. |
+| `skills/organization/SKILL.md` | **migrated** | `skills/organization-hierarchy/SKILL.md` | Organizations, systems, repos. |
+| `skills/syn-repo/SKILL.md` | **merged** | `skills/organization-hierarchy/SKILL.md` | CLI-shaped subset of organization. |
 | `skills/github-automation/SKILL.md` | **migrated** | `skills/github-triggers/SKILL.md` | Rewritten. Trigger rules and their history through `syn triggers` and the API. GitHub App installation, webhook tunnelling, Smee and `just` recipes move to contributor docs. Stale items corrected below. |
 | `skills/syn-triggers/SKILL.md` | **merged** | `skills/github-triggers/SKILL.md` | CLI-shaped subset of github-automation. |
 | `skills/platform-ops/SKILL.md` | **move to contributor docs** | `syntropic137/syntropic137` `docs/` | Operating the platform's own stack (Docker Compose, `just`, service internals) is contributor knowledge, not product use. |
@@ -65,7 +67,7 @@ in the plugin repo; only those marked *verified* were checked in this PR.
 | `commands/syn-costs.md` | keep as harness adapter | `skills/observing-sessions` | The command itself was not verified; the stale items found in the observability skill below are likely to recur in it. |
 | `commands/syn-metrics.md` | keep as harness adapter | `skills/observing-sessions` | The command itself was not verified; the stale items found in the observability skill below are likely to recur in it. |
 | `commands/syn-triggers.md` | keep as harness adapter | `skills/github-triggers` | The command itself was not verified. Its sibling skill used `--name`, `--event`, `--repository`, `--budget`, `--max-fires` and `pause --reason`, none of which exist (*verified*, see below); check the command for the same. |
-| `commands/syn-marketplace.md` | keep as harness adapter | `skills/workflow-marketplace` (later) | Not verified in this PR. |
+| `commands/syn-marketplace.md` | keep as harness adapter | `skills/workflow-marketplace` (migrated) | Its knowledge now lives in the skill; the command stays as the Claude entry point. |
 | `commands/syn-setup.md` | keep as harness adapter | public docs; contributor docs for the dev path | Uses Claude's `!` external-execution prefix so secrets never enter the context window. That property is the reason it must stay Claude-specific. |
 
 ## Agents (2): keep as harness adapters
@@ -73,7 +75,7 @@ in the plugin repo; only those marked *verified* were checked in this PR.
 | plugin path | disposition | knowledge lives in | notes |
 |---|---|---|---|
 | `agents/execution-monitor.md` | keep as harness adapter | `skills/execution-control` (steps 2 and 3: read, follow live, confirm) | A Claude subagent definition (model, disallowed tools). Its fixed cost alert thresholds are policy, not product, and were not carried into the skill. It references `/syn-observe`, a slash command. |
-| `agents/security-reviewer.md` | keep as harness adapter | `skills/workflow-marketplace` (later): review a package before installing it | A Claude subagent definition (model, allowed tools). |
+| `agents/security-reviewer.md` | keep as harness adapter | `skills/workflow-marketplace` (migrated): step 3, review a package before installing it | A Claude subagent definition (model, allowed tools). |
 
 ## Hooks: keep as harness adapter
 
@@ -89,7 +91,7 @@ in the plugin repo; only those marked *verified* were checked in this PR.
 | `.claude-plugin/plugin.json` | keep in the plugin | Claude Code plugin manifest (name `syntropic137`, version `0.12.4`, `commands` and `skills` paths). When migrated skills are removed from the plugin, its `skills` path should instead point at, or vendor, this repo. |
 | `.claude-plugin/marketplace.json` | keep in the plugin | Follow-up: its plugin entry says version `0.9.0`, stale against `plugin.json`'s `0.12.4`. |
 | `CLAUDE.md`, `README.md`, `SECURITY.md` | keep in the plugin | Describe the plugin itself. `SECURITY.md`'s rule that secrets never enter the context window applies to every skill here too, and none of the migrated skills asks for a secret value. |
-| `scripts/validate_yaml_examples.py` | keep in the plugin | Validates the plugin's YAML examples against the platform schema. A future `skills/authoring-workflows` will need the same check here. |
+| `scripts/validate_yaml_examples.py` | keep in the plugin | Validates the plugin's YAML examples against the platform schema. `skills/authoring-workflows` now has YAML examples too; its complete example was checked with `WorkflowDefinition.from_yaml` and `validate_workflow_yaml` on main, but this repo has no automated check for it yet. |
 | `scripts/syn137-banner-claude-plugin.html`, `public/assets/` | keep in the plugin | Branding assets. |
 | `.github/workflows/` | keep in the plugin | Plugin tagging and version checks. Not touched. |
 | `.gitattributes`, `.gitignore` | keep in the plugin | Repo housekeeping. |
@@ -269,6 +271,90 @@ main. What changed:
 16. `/syn-triggers`, `/syn-health`, `argument-hint`, `model: sonnet`:
     removed.
 
+### `workflow-marketplace` (from `marketplace`, `syn-marketplace` and `agents/security-reviewer.md`)
+
+1. `syn workflow export <id> --output ./workflow.yaml`: `-o/--output` is a
+   directory (default `./<slug>-export`), and `-f/--format` is
+   `package` or `plugin`.
+2. "Push a `workflows/` directory to GitHub, then `syn marketplace add` it":
+   `marketplace add` refuses a repository without `marketplace.json` at its
+   root. The skill documents the index format.
+3. `triggers.json` in a package, and reviewing it: nothing in the CLI reads
+   that file. Removed.
+4. The list of workflows in the default marketplace: not verifiable from the
+   product. Removed.
+5. Ref precedence was not stated, and `--ref main` reads like an override: a
+   plugin entry's pinned `ref` wins over the default `main`. Stated.
+6. Search silently skipping a marketplace whose index fails to fetch, and
+   install not being transactional: not mentioned. Added as anti-patterns.
+7. `install --dry-run` presented as validation: it resolves the package
+   locally and does not ask the deployment. The skill validates with
+   `syn workflow validate` on the package directory instead, since a single
+   file inside a package cannot resolve `prompt_file`.
+8. Security reviewer: "a codex phase with no `model` runs unpriced": the
+   model is defaulted at install. Removed. Its example declaring `read`: a
+   lowercase name outside the tool vocabulary is rejected; the check is now
+   "declared vs instructed". "Budget" as a trigger safety limit: no such
+   limit. Removed.
+9. Reviewing `claude_plugins` and `skills` entries, which pull more code in
+   at run time, and `sandbox: full-access` being the codex default: not in
+   the source. Added to the review table.
+10. `/syn-health`, `/syn-marketplace`, "use the security-reviewer agent",
+    `argument-hint`, `model: sonnet`: Claude only. Removed.
+
+### `organization-hierarchy` (from `organization` and `syn-repo`)
+
+1. `syn organization create`: the command group is `syn org`.
+2. `syn system create --organization`: the flag is `-o/--org`, and it is
+   required.
+3. Repos auto-registered by the GitHub App on first webhook: not on main.
+   Registration is explicit, through `syn repo register` (`POST /repos`).
+4. "Assigning an already assigned repo fails silently": it is refused with
+   "Repo is already assigned to a system" (409). Unassign first.
+5. `syn repo register --system` presented as working: the flag is accepted
+   and never sent. Stated as an anti-pattern; assign separately.
+6. `/organizations/overview`: no such route. Deployment wide rollups are
+   `/insights/overview`, `/insights/cost`, `/insights/contribution-heatmap`.
+7. "Set up the hierarchy before triggers so cost is attributed": cost is
+   keyed by the repository's `owner/repo` name and correlated from
+   executions, so it does not depend on registration order. Removed.
+8. curl examples had no `Authorization` header. Added.
+9. Read model class names, `npx @syntropic137/setup github-app` and
+   `SYN_PUBLIC_HOSTNAME` in a local env file: internal or setup material.
+   Removed.
+10. Deregistering a repo: not covered. Added `DELETE /repos/{id}` (no CLI
+    command; refused while active triggers exist).
+11. `/syn-repo`, `argument-hint`, `model`: Claude only. Removed.
+
+### `authoring-workflows` (from the schema half of `workflow-management`)
+
+1. `type` presented as a validated enum: it is free text, and a value
+   outside the six known types is stored as `custom` without an error.
+2. `requires_repos` "inferred when omitted": it defaults to true when
+   omitted. Stated as Trap 1.
+3. `can_open_pr` "inert since #1478 ... (#1492)": it is retired, accepted,
+   dropped and reported as a notice. Stated without issue numbers.
+4. "A codex phase with no model lands in `unpriced_tokens`": no such field,
+   and the model is defaulted at install. Removed.
+5. `CODEX_AUTH_JSON` in the platform `.env`: deployment configuration, not
+   authoring. Removed.
+6. Escalation via `syn control status <exec-id>` to read each phase's
+   `artifact_id`: control status prints only the id and state. Removed;
+   execution-control covers diagnosis.
+7. A codex model id named in an example: not verifiable from the product.
+   Replaced with "a concrete model id".
+8. `allowed_tools` under `agent:`: not in the source, but the most common
+   failure (#1081). The agent block forbids unknown keys, so it is rejected.
+   Stated as Trap 3, with a wrong and right example.
+9. `$ARGUMENTS` source: stated only in passing. Stated as Trap 2, including
+   the refusal of `-t` when no prompt consumes the task.
+10. Not in the source and added: `max_tokens` rejected, `sandbox: read-only`
+    refused, `execution_type` other than `sequential` rejected, reserved
+    input names, `input_artifacts` must resolve, prompt file frontmatter
+    merge, `shared://`, the `{{repos}}` and `{{<phase-id>}}` placeholders and
+    the 2000 character cut, pinned plugin and skill references with
+    `@latest` rejected.
+
 ## Verification against `syntropic137/syntropic137` main
 
 Every command, flag, endpoint and response field the migrated skills name,
@@ -305,6 +391,18 @@ API is `apps/syn-api/src/syn_api/`, abbreviated `api/`.
 | `syn triggers register -r -w -e -c --max-attempts (5) --cooldown (300)`, sends no `input_mapping`, `daily_limit` 20; `enable <preset> -r [-w]`; `list -r -s -a`; `show`; `history -n`; `pause`, `resume` (no `--reason`); `delete -f`; `disable-all -r -f` | `cli/triggers.ts` |
 | `syn github repos [-i] [--include-private]` | `cli/github.ts` |
 | `syn repo list` | `cli/repo.ts` |
+| `syn marketplace add <org/repo> -r/--ref (main) -n/--name`, `list` (Name, Repo, Ref, Added), `remove`, `refresh [name]`; `marketplace.json` required at the root; duplicate name refused | `cli/marketplace/registry.ts` |
+| index cache four hours; failed index fetch returns null and is skipped | `apps/syn-cli-node/src/marketplace/client.ts` (`CACHE_TTL_MS`) |
+| `marketplace.json`: `name`, optional `syntropic137 {type, min_platform_version}`, `plugins[]` with `name`, `source`, `version`, `description`, `category`, `tags`, `ref`; absolute or `..` source refused | `apps/syn-cli-node/src/marketplace/models.ts` |
+| `syn workflow search [query] -c/--category -t/--tag -r/--registry`; `info <name>` first match | `cli/workflow/search.ts` |
+| install: bare name tried in marketplaces; ref precedence; claude_plugins and skills preflight; non-transactional error; prune on newer version | `cli/workflow/install.ts` |
+| package formats `workflows/*/workflow.yaml`, `workflow.yaml`, loose `*.yaml`; `shared://` to `phase-library/`; manifest `syntropic137-plugin.json` | `apps/syn-cli-node/src/packages/resolver.ts` |
+| `syn workflow init [dir] -n -t --phases --multi` (phases/*.md, README.md; multi adds manifest and phase-library) | `cli/workflow/install.ts`, `apps/syn-cli-node/src/packages/resolver.ts` |
+| `syn workflow export <id> -f/--format package\|plugin -o/--output DIR --force` | `cli/workflow/export.ts` |
+| `syn workflow validate <file\|dir>` (file posted to `/workflows/validate`; directory resolved locally then each validated) | `cli/workflow/crud.ts` |
+| `syn org create -n -s`, `list`, `show`, `update`, `delete -f` | `cli/org.ts` |
+| `syn system create -n -d -o (required)`, `list -o`, `show`, `update`, `delete -f`, `status`, `cost`, `activity -n`, `patterns`, `history -n` | `cli/system.ts` |
+| `syn repo register -u -o` (single org auto-selected; `--system` parsed and not sent), `list -o -s`, `show`, `assign -s`, `unassign`, `health`, `cost`, `activity`, `failures`, `sessions` | `cli/repo.ts` |
 
 ### API
 
@@ -329,6 +427,11 @@ API is `apps/syn-api/src/syn_api/`, abbreviated `api/`.
 | `POST /triggers` (`name`, `event`, `repository`, `workflow_id`, `conditions[]` with string `value`, `input_mapping`, `config` defaults 3 / 20 / 300); `POST /triggers/presets/{preset_name}` (duplicate name and event refused); `PATCH /triggers/{id}` `action` `pause`/`resume`, `reason`; `DELETE /triggers/{id}` | `api/routes/triggers/commands.py` |
 | `GET /triggers?repository&status`, `GET /triggers/{id}` (`fire_count`, `conditions`, `input_mapping`, `config`, `last_fired_at`), `GET /triggers/{id}/history` (`entries[]`: `fired_at`, `execution_id`, `event_type`, `pr_number`, `status`, `cost_usd`, `guard_name`, `block_reason`) | `api/routes/triggers/queries.py` |
 | `ExecutionDetailResponse.inputs` | `api/routes/executions/models.py` |
+| `POST /workflows/validate` (`content`, `filename`; `valid`, `name`, `workflow_type`, `phase_count`, `errors`, `warnings`; no `prompt_file` base dir) | `api/routes/workflows/commands.py` |
+| `GET /workflows/{id}/export?format=package\|plugin` | `api/routes/workflows/queries.py` |
+| `/organizations` CRUD; `/systems` CRUD, `organization_id` filter, `/status`, `/cost`, `/activity`, `/patterns`, `/history` | `api/routes/organizations.py`, `api/routes/systems.py` |
+| `/repos` CRUD, filters `organization_id`, `system_id`, `provider`, `unassigned`; `/assign` (`system_id`), `/unassign`, `/health`, `/cost`, `/activity`, `/failures`, `/sessions`; `DELETE` 409 with active triggers | `api/routes/repos.py` |
+| no `/organizations/overview` | `api/routes/organizations.py`, `api/routes/insights.py` |
 
 ### Domain behaviour the skills state
 
@@ -349,6 +452,14 @@ API is `apps/syn-api/src/syn_api/`, abbreviated `api/`.
 | presets `self-healing`, `review-fix`, `comment-command`: events, conditions, input mappings, limits, default workflow `self-heal-pr` | `packages/syn-domain/.../github/_shared/trigger_presets.py` |
 | polled versus webhook-only events | `packages/syn-domain/.../github/_shared/event_availability.py` |
 | an input named `repository` becomes the run's repository | `packages/syn-domain/.../github/slices/dispatch_triggered_workflow/projection.py` |
+| every workflow, phase, input, agent and repository key; `extra="forbid"`; `max_tokens` rejected; `can_open_pr` retired; `execution_type` sequential only; `sandbox: read-only` refused; `claude-interactive` rejected; reserved input names; tool vocabulary and codex rule; `input_artifacts` resolution; `prompt_file` and frontmatter aliases | `packages/syn-domain/.../orchestration/_shared/workflow_definition.py` |
+| `allowed_tools` under `agent:` rejected (`extra_forbidden`); the complete example valid | checked with `WorkflowDefinition.from_yaml` and `validate_workflow_yaml` on main |
+| `requires_repos` default true | `packages/syn-domain/.../orchestration/_shared/yaml_to_command.py` (`infer_requires_repos`) |
+| unknown `type` stored as `custom` | same file; `validate_workflow_yaml` returns valid for `type: bogus` |
+| plugin refs `org/repo@v`, `<url>@v`; skill refs `org/repo/skill@v`; `@latest` rejected | `.../orchestration/_shared/claude_plugin_ref.py`, `skill_ref.py` |
+| placeholders `{{execution_id}}`, `{{workflow_id}}`, `{{repo_url}}`, deprecated `{{repository}}`, inputs, `{{<phase-id>}}` and appendix cut to 2000, `$ARGUMENTS` from `task`; `{{repos}}` from `-R` | `apps/syn-api/src/syn_api/_wiring.py`; `WorkflowExecutionProcessor` |
+| assign refused when already assigned; unassign refused when unassigned; duplicate registration refused | organization context repo aggregate; `api/routes/repos.py` (409) |
+| no automatic repo registration from GitHub events | `POST /repos` is the only registration route; `syn repo register` its only caller |
 
 ## Harness discovery
 
