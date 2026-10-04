@@ -1,6 +1,6 @@
 ---
 name: mining-session-logs
-description: Use when turning finished agent runs into written lessons - reviewing session logs or transcripts, auditing where executions fail, finding recurring mistakes or wasted effort, attributing spend to failure classes, or writing a retrospective from a batch of runs. Trigger phrases include "what did we learn from these runs", "review the session logs", "mine the transcripts", "why do executions keep failing", "where is the money going", "write a retrospective", "find repeated mistakes", "audit the last N runs". Do NOT use for debugging one specific failed execution (that is ordinary debugging - read its error and phases directly), for live monitoring of a run in progress, or for deciding whether a single pull request is correct.
+description: Use when turning finished agent runs into written lessons - reviewing session logs or transcripts across a batch of runs, auditing where executions fail, finding recurring mistakes or wasted effort, attributing spend to failure classes, or writing a retrospective. Trigger phrases include "what did we learn from these runs", "review the session logs", "mine the transcripts", "why do executions keep failing", "where is the money going", "write a retrospective", "find repeated mistakes", "audit the last N runs". Do NOT use for why one specific execution failed (use execution-control), for what one session did or cost (use observing-sessions), for collecting every session of one run (use discovering-run-sessions), for live monitoring of a run in progress (use execution-control), or for deciding whether a single pull request is correct.
 ---
 
 # Mining session logs into lessons
@@ -9,10 +9,106 @@ A finished run is evidence that nobody reads. Dozens of them are a dataset: the
 same setup failure in twelve workspaces, one phase quietly consuming a third of
 the budget, a tool that is never used and one that is used for everything.
 
-The work is not hard. What makes it fail is that the findings evaporate - they
+The work is not hard. What makes it fail is that the findings evaporate: they
 get relayed in a message, the message scrolls away, and the same analysis gets
 run again next month against the same unchanged behaviour. **The output of this
 skill is a written artifact and a set of filed actions, not a summary.**
+
+## When to Use
+
+- You have a batch of finished runs (a time window, a workflow, a deployment)
+  and want to know what they teach.
+- Executions keep failing and you want the failure classes ranked by what
+  they cost.
+- You need to know where the spend goes across many runs.
+- You are writing a retrospective that someone else will read later.
+
+## When NOT to Use
+
+- One execution failed and you want to know why: use execution-control.
+- One session was expensive or did something odd: use observing-sessions.
+- You need every session and transcript of one run: use
+  discovering-run-sessions, then come back here if the run joins a batch.
+- A run is still in progress: use execution-control.
+
+## Input
+
+- **Window** (required): the date range, workflow or deployment the batch
+  covers. It is stated at the top of the retrospective.
+- **Deployment API** (required): `$SYN_API_URL` and credentials, for execution
+  records.
+- **Session store** (required for transcripts): its base URL and the
+  `deployment:<name>` tag of the deployment under study.
+- **Questions** (optional): what the analysis should answer, for example
+  failure patterns, cost concentration, tool usage, delivery integrity.
+  Without them, the population facets in step 2 set the agenda.
+- **Durable destination** (required): where the retrospective is written, and
+  the issue tracker the actions are filed in.
+
+## Workflow
+
+1. **Pull the corpus to local files.** Execution records first: they are small
+   and structured. Session metadata next. Transcript bodies last and only for
+   a sample. Analysis agents frequently cannot reach the deployment (private
+   networks, VPN-only hosts, sandboxed subagents), so pull the data yourself
+   and hand the files over. Endpoints and fields are in
+   [references/data-sources.md](references/data-sources.md).
+
+2. **Facet the whole population.** Group executions by status, workflow and
+   phase. Sum cost by status. Metadata over every session is unbiased and
+   cheap, and usually contains the headline on its own.
+
+3. **Attribute the failures.** For every non-completed execution, classify the
+   failure from its stored error, and sum the spend per class. Quote one error
+   verbatim per class: the exact string is what makes a class recognisable
+   next time. Rank classes by cost, not frequency, because the most frequent
+   failure often fails early and costs little, while one that dies late
+   discards work that already succeeded.
+
+4. **Sample transcripts deliberately, and say why.** Longest for floundering,
+   failed-only for failure shapes, random for rates. Any sample chosen by size
+   or cost is biased toward difficulty by construction, so it can find
+   patterns but cannot estimate a rate.
+
+5. **Count before you read.** Transcripts run to megabytes; reading whole files
+   exhausts a context window and produces worse answers than `grep -c` and a
+   frequency table. Find the frequent patterns first, then open a narrow
+   window around two or three of them for verbatim quotes. Recipes are in
+   [references/counting.md](references/counting.md). Read tool names from the
+   recorded operations, not the agent's prose: an agent's account of what it
+   did is a summary written by the thing being audited.
+
+6. **Fan out the analysis.** One agent per question. Give each the local file
+   paths, an explicit warning that files are large, and a demand for exact
+   counts with distinct-session denominators.
+
+7. **Re-derive the numbers you are about to act on.** Analysis agents
+   miscount, and a miscount is indistinguishable from a finding. Check the
+   ones a decision rests on, not all of them. Expect both outcomes: in one
+   real audit an agent reported 55 and 50 occurrences of two shell errors
+   where the true count for both was zero, while its tool-frequency table from
+   the same corpus reproduced exactly.
+
+8. **Write the retrospective.** Window, sample size and method at the top, so a
+   later reader can judge the claims without re-running anything. Findings
+   ranked by cost, each marked measured or inferred, and each naming which
+   instrument it rests on (population metadata or sampled transcripts). A
+   section for what you could not determine.
+
+9. **File the actions.** Each finding becomes an issue with a reproduction, a
+   prompt or skill change, or a recorded decision not to act. This is the step
+   that is easiest to skip and the one that decides whether the exercise was
+   worth its cost.
+
+## Output
+
+- A retrospective at a durable path, stating the window, the sample size and
+  the method, with findings ranked by cost and a section for what could not
+  be determined.
+- One filed action per finding: an issue with a reproduction, a prompt or
+  skill change, or an explicit "accepted, not worth fixing" with a reason.
+- The local corpus files the numbers were derived from, so a reader can
+  re-derive them.
 
 ## Outcomes we are looking for
 
@@ -41,52 +137,12 @@ skill is a written artifact and a set of filed actions, not a summary.**
 - *Signal:* every claim carries its denominator, and any claim resting on a
   non-random sample says so in the same breath.
 
-## Principles
-
-1. **Pre-fetch the corpus to local files, then analyse.** Analysis agents
-   frequently cannot reach the deployment - private networks, VPN-only hosts,
-   sandboxed subagents. Pull the data yourself, write it to files, and hand the
-   files over. A fleet that spends its first minutes discovering it has no route
-   has told you nothing.
-
-2. **Count before you read.** Transcripts run to megabytes. Reading whole files
-   exhausts a context window and produces worse answers than `grep -c` and a
-   frequency table. Find the frequent patterns first, then open a narrow window
-   around two or three of them for verbatim quotes.
-
-3. **Re-derive any load-bearing number before acting on it.** Analysis agents
-   miscount, and a miscount is indistinguishable from a finding. Check the ones
-   a decision rests on - not all of them. Expect both outcomes: in one real
-   audit an agent reported 55 and 50 occurrences of two shell errors where the
-   true count for both was zero, while its tool-frequency table from the same
-   corpus reproduced exactly.
-
-4. **Structural facets and transcript reading are different instruments.**
-   Metadata over *every* session (phase, duration, message count, model, cost)
-   is unbiased and cheap. Reading transcripts requires sampling, and any sample
-   chosen by size or cost is biased toward difficulty by construction. State
-   which instrument each claim rests on; they are not interchangeable.
-
-5. **Read the tool names from the event stream, not the agent's prose.** An
-   agent's account of what it did is a summary written by the thing being
-   audited. The recorded operations are the observation.
-
-6. **Rank by cost, not by frequency.** The most frequent failure is often the
-   cheapest - it fails early, before any expensive phase runs. The failure worth
-   fixing first is usually one that dies *late*, discarding work that already
-   succeeded. Attribute spend to failure class before deciding what to fix.
-
-7. **A finding with no home is a finding you will rediscover.** Before finishing,
-   every item is an issue with a reproduction, a change to a prompt or skill, or
-   a recorded decision not to act. This is the principle that is easiest to skip
-   and the one that determines whether the exercise was worth its cost.
-
 ## Anti-patterns
 
 - **The relayed summary.** Findings exist as a message and nowhere else. The
   next person asks the same question and pays for the same analysis.
 
-- **A percentage with no denominator.** "Most sessions hit setup problems" -
+- **A percentage with no denominator.** "Most sessions hit setup problems":
   out of how many, and chosen how?
 
 - **The longest-sessions sample presented as representative.** Sampling the
@@ -100,84 +156,68 @@ skill is a written artifact and a set of filed actions, not a summary.**
   each, fixed first, while one late-stage failure quietly discards finished work
   every time it happens.
 
+- **A fleet with no route to the data.** Analysis agents told to fetch the
+  corpus themselves spend their first minutes discovering they cannot reach
+  the deployment, and report nothing.
+
 - **A retrospective with no actions.** Everything is described, nothing is filed,
   and the behaviour is unchanged next month.
 
-## The procedure
+## Recommended tools and practices (as of 2026-10-04)
 
-1. **Pull the corpus.** Execution records first - they are small and structured.
-   Session metadata next. Transcript bodies last and only for a sample. Write
-   everything to local files.
+### Outcome: the lesson outlives the runs
 
-2. **Facet the whole population.** Group executions by status, workflow and
-   phase. Sum cost by status. This is unbiased and usually contains the headline
-   on its own.
+- **Local corpus files, pulled before any analysis.** Ladders up because the
+  retrospective can cite the files its numbers came from, and a later reader
+  can re-derive them without the deployment. Tradeoffs: transcripts are large;
+  pull bodies only for the sample. Endpoints in
+  [references/data-sources.md](references/data-sources.md).
+- **Window, sample size and method at the top of the retrospective.** Ladders
+  up by letting a reader judge the claims without re-running the analysis.
 
-3. **Attribute the failures.** For every non-completed execution, classify the
-   failure from its stored error, and sum the spend per class. Quote one error
-   verbatim per class - the exact string is what makes a class recognisable next
-   time.
+### Outcome: every finding lands somewhere that can change
 
-4. **Sample transcripts deliberately.** Say why you chose the sample. Longest
-   for floundering, failed-only for failure shapes, random for rates.
+- **The project's issue tracker, one issue per finding, with the verbatim
+  error string as the reproduction.** Ladders up because an issue has an
+  owner and a state, and a chat message has neither. Tradeoffs: filing takes
+  time the analysis does not; skipping it is the most common way the exercise
+  is wasted.
+- **Spend attributed per failure class, from `total_cost_usd` and
+  `phases[].cost_usd`.** Ladders up by ranking findings by what fixing them is
+  worth, so the first issue filed is the expensive one.
 
-5. **Fan out the analysis.** One agent per question - failure patterns, cost
-   concentration, tool usage, delivery integrity. Give each the local file paths,
-   an explicit warning that files are large, and a demand for exact counts with
-   distinct-session denominators.
+### Outcome: the numbers survive scrutiny
 
-6. **Verify what matters.** Re-derive the numbers you are about to act on.
+- **`grep -c`, `grep -l | wc -l` and a tool-name frequency table over the
+  local files.** Ladders up because exact counts with distinct-session
+  denominators can be re-run by anyone. Tradeoffs: a regex with `.*` inflates
+  counts; prefer exact literals, and verify a suspicious zero with a second
+  spelling. Recipes in [references/counting.md](references/counting.md).
+- **`phases[].operations` from `GET /api/v1/executions/{id}` as the record of
+  tool use.** Ladders up because it is the observation, not the agent's
+  account of itself.
 
-7. **Write the retrospective.** Window, sample size and method at the top, so a
-   later reader can judge the claims without re-running anything. Findings
-   ranked by cost. A section for what you could not determine.
+### Outcome: sampling bias is declared, not hidden
 
-8. **File the actions.** Each finding becomes an issue with a reproduction, a
-   change, or a recorded non-decision.
+- **`GET /v1/sessions/corpus` for metadata over every session, before any
+  sampling.** Ladders up because population facets are unbiased, so the
+  sampled claims can be compared against them. Tradeoffs: metadata says what
+  happened, not why.
+- **Filter the deployment by its `deployment:<name>` tag, not
+  `origin_environment`.** Ladders up because `origin_environment` is the
+  container, and filtering on it returns nothing, which reads as an empty
+  population rather than a wrong query.
 
-## Recommended tools and practices (as of 2026-09-17)
+## References
 
-The endpoints below are the deployed product surface. If one has moved, only
-this section needs editing.
+- [references/data-sources.md](references/data-sources.md): the execution
+  and session-store endpoints, their fields, and the session tags. Read at
+  step 1.
+- [references/counting.md](references/counting.md): shell recipes for exact
+  counts and denominators over transcript files. Read at step 5, and hand it
+  to every analysis agent.
 
-### Execution records, from the Syntropic137 API
+## Continual improvement
 
-```
-GET /api/v1/executions?page_size=100
-    -> executions[]: workflow_execution_id, workflow_id, status, total_cost_usd,
-       total_tokens, duration_seconds, tool_call_count, completed_phases,
-       total_phases, error_message, started_at
-
-GET /api/v1/executions/{id}
-    -> phases[]: name, status, model, cost_usd, duration_seconds,
-       error_message, artifact_id, operations[]
-```
-
-`phases[].operations` is the recorded tool use - the observation that principle 5
-refers to. `GET /api/v1/artifacts/{id}` returns a phase's written output.
-
-### Session transcripts, from the session store
-
-```
-GET  /v1/sessions/corpus?limit=&cursor=       metadata for analytics, IDs and facets
-GET  /v1/sessions/search?tags=&limit=&cursor= keyset search; deployment is a TAG
-POST /v1/sessions/raw/batch                   {"session_ids": [...]}, max 10 per call
-GET  /status                                  per-machine totals and staleness
-```
-
-Sessions carry tags of the form `deployment:<name>`, `workflow_id:<id>`,
-`phase_id:<id>`, `execution_id:<id>`. Filter the deployment by **tag** -
-`origin_environment` is the container, not the deployment, and filtering on it
-returns nothing.
-
-### Counting inside large transcripts
-
-```sh
-grep -oh '"name":"[A-Za-z_]*"' raw/*.txt | sort | uniq -c | sort -rn
-grep -c "<pattern>" raw/*.txt
-grep -l "<pattern>" raw/*.txt | wc -l        # distinct sessions, the denominator
-```
-
-Prefer an exact literal over a regex with `.*`, which will match across a whole
-line and inflate counts. Verify a suspicious zero with a second spelling before
-reporting it as absence.
+File drift, gaps, or proposed updates at
+https://github.com/syntropic137/syntropic137-skills/issues
