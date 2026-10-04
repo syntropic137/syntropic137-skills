@@ -50,7 +50,7 @@ exists to make that impossible.
   not inputs: `repos` and `repository` are rejected as `--input` keys.
 - **Run modifiers** (optional): `-n`, `--dry-run` checks everything and
   dispatches nothing; `-q`, `--quiet` skips the run preview.
-- **Definition** (to register): a self-contained `.yaml` file, a package
+- **Definition** (required to register): a self-contained `.yaml` file, a package
   directory, a git URL, `org/repo`, or a marketplace name.
 
 ## Workflow

@@ -45,7 +45,7 @@ every section. Say which state it is in, every time.**
   `--kind <section>`.
 - **`--require-complete`** (optional flag): for automation that must not act
   on a partial list.
-- **`jq`** (tool): the examples use it.
+- **`jq`** (tool, optional): the examples use it.
 
 ## Coverage
 
@@ -221,8 +221,10 @@ transcript id is never a platform session id, so never pass one to
 - **`syn execution transcript --json`.** Ladders up by exiting nonzero with
   the body's status, which is what goes in the report.
 - **`syn execution sessions <execution-id> --refresh`** schedules a local
-  reconstruction and reports its job. It is the one inventory command that
-  writes; use it when the inventory is stale and the user wants it rebuilt.
+  reconstruction and reports its job. Ladders up by turning a transcript
+  that is unavailable only because the inventory is stale into one that can
+  be read. Tradeoffs: it is the one inventory command that writes; use it
+  when the inventory is stale and the user wants it rebuilt.
 
 The HTTP routes, and the optional remote replica, are in
 [references/http-api.md](references/http-api.md). Run

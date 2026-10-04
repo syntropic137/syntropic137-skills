@@ -51,7 +51,7 @@ inputs it needed.**
 - **Input mapping** (optional, API only): workflow input name to payload
   path.
 - **Limits** (optional): `max_attempts`, `daily_limit`, `cooldown_seconds`.
-- **Trigger id** (for show, history, pause, resume, delete).
+- **Trigger id** (string, required for show, history, pause, resume, delete).
 
 ## How a rule decides
 

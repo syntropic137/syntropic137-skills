@@ -45,13 +45,14 @@ would review a script before piping it to a shell.
   (basic). Search and info read only your local marketplace registry and the
   indexes it points at. If `syn` is not installed, run
   `npx @syntropic137/setup cli`.
-- **`git`** (tool): fetching a marketplace or a package clones it with
+- **`git`** (tool, required): fetching a marketplace or a package clones it with
   `git`, so `git` must be on the path and able to reach GitHub.
-- **Marketplace repository** (`org/repo`) and, optionally, a **ref** (tag or
-  branch) to pin.
-- **Package name**, which you get from `syn workflow search` or
-  `syn workflow info`.
-- **Workflow id** (to publish): the deployed workflow to export.
+- **Marketplace repository** (`org/repo`, required to register a
+  marketplace) and a **ref** (tag or branch, optional) to pin.
+- **Package name** (string, required to install by name, review, update or uninstall), which
+  you get from `syn workflow search` or `syn workflow info`.
+- **Workflow id** (string, required to publish): the deployed workflow to
+  export.
 
 ## Workflow
 

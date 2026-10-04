@@ -41,12 +41,13 @@ trigger fires for its repository whether or not that repo has a system.
   `http://localhost:8137`. Credentials are `SYN_API_TOKEN` (bearer) or
   `SYN_API_USER` + `SYN_API_PASSWORD` (basic). If `syn` is not installed:
   `npx @syntropic137/setup cli`.
-- **Ids, not names.** Every command after `create` takes the id printed at
-  creation (`org-...`, `system-...`, `repo-...`). List to find one.
-- **Repository** (`owner/repo`, to register): worth registering when the
-  GitHub App can reach it.
-- **Organization id** (optional for `register` when the deployment has
-  exactly one organization).
+- **Organization, system and repo ids** (strings `org-...`, `system-...`,
+  `repo-...`, required by every command after `create`): ids, not names. Each
+  is printed at creation; list to find one.
+- **Repository** (`owner/repo`, required to register): worth registering when
+  the GitHub App can reach it.
+- **Organization id** (string, optional for `register` when the deployment
+  has exactly one organization).
 
 ## Workflow
 
@@ -185,7 +186,8 @@ trigger fires for its repository whether or not that repo has a system.
   up by answering "which system" questions in one call. Tradeoffs: cost is
   keyed by repository name and includes runs from before registration.
 - **`/insights/overview` and `/insights/cost`** for deployment wide rollups
-  across all organizations.
+  across all organizations. Ladders up by answering a question that spans
+  every organization from one rollup instead of summing systems by hand.
 
 ### Outcome: a refused change is understood, not retried
 
