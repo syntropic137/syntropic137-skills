@@ -8,14 +8,167 @@ description: Use when operating Syntropic137 workflow templates through the `syn
 A workflow is a template registered in a Syntropic137 deployment: an id, a
 name, an ordered list of phases (each one headless agent invocation with its
 own prompt and model), and a set of declared inputs. Running a workflow
-creates an **execution** with its own `exec-...` id. This skill covers the
-template side: finding one, understanding what it needs, starting it
-correctly, and registering or changing it.
+creates an **execution** with its own `exec-...` id.
 
 The expensive mistake here is not a failed command. It is a run that starts,
 spends full money and time, reports success, and did work nobody asked for
 because the task or an input never reached a prompt. Almost everything below
 exists to make that impossible.
+
+## When to Use
+
+- You need to know which workflows a deployment can run, or what inputs one
+  takes.
+- You are about to start a run and want the task, inputs and repositories to
+  reach the prompts.
+- You are registering, updating, archiving or uninstalling a workflow.
+- You want the list of past runs of one workflow.
+
+## When NOT to Use
+
+- The run has already started and you need to follow, cancel, resume or
+  diagnose it: use execution-control.
+- You are writing the workflow YAML itself: use authoring-workflows.
+- You are browsing, searching or publishing to a marketplace: use
+  workflow-marketplace.
+- You want lessons from a batch of finished runs: use mining-session-logs.
+
+## Input
+
+- **Deployment** (required, environment): `SYN_API_URL`, default
+  `http://localhost:8137`. Credentials are `SYN_API_TOKEN` (bearer) or
+  `SYN_API_USER` + `SYN_API_PASSWORD` (basic). If `syn` is not installed:
+  `npx @syntropic137/setup cli`.
+- **Workflow id** (string, required to run or show): a unique prefix is
+  accepted by `syn workflow show`.
+- **Task** (string, optional): `-t`, `--task`. Phase prompts read it as
+  `$ARGUMENTS` or `{{task}}`.
+- **Inputs** (`key=value`, optional, repeatable): `-i`, `--input`, any other
+  declared input.
+- **Repositories** (optional, repeatable): `-R`, `--repo`, as `owner/repo`, a
+  full GitHub URL, or a `repo-...` id from `syn repo list`. Repositories are
+  not inputs: `repos` and `repository` are rejected as `--input` keys.
+- **Run modifiers** (optional): `-n`, `--dry-run` checks everything and
+  dispatches nothing; `-q`, `--quiet` skips the run preview.
+- **Definition** (to register): a self-contained `.yaml` file, a package
+  directory, a git URL, `org/repo`, or a marketplace name.
+
+## Workflow
+
+1. Check which deployment you are talking to, because the same workflow id can
+   resolve to different definitions on different hosts:
+
+   ```bash
+   syn config show     # SYN_API_URL, and whether credentials are set
+   syn health          # is that deployment reachable and healthy
+   ```
+
+2. Find the workflow:
+
+   ```bash
+   syn workflow list                     # registered on this deployment, runnable
+   syn workflow list --include-archived  # also archived (deleted) templates
+   syn workflow packages                 # packages this machine installed, with version and source
+   ```
+
+   `syn workflow list` prints ONE page of `GET /workflows` and does not
+   paginate. Before concluding a workflow is absent, try
+   `syn workflow show <workflow-id>`, or page the HTTP endpoint (see
+   [references/http-api.md](references/http-api.md)) until a page comes back
+   short. `packages` reads local install history (under
+   `~/.syntropic137/workflows/`, or `$SYN_CONFIG_DIR`), not the deployment, so
+   a package can be listed there and missing from the deployment, or the
+   reverse.
+
+3. Read what it needs with `syn workflow show <workflow-id>`. It prints the
+   id, name, type, classification, each phase with its model, and each
+   declared input marked `[required]` or `[optional]`, with its description
+   and default. An input that is required and has no default must be
+   supplied.
+
+4. Rehearse the run whenever the inputs are not obviously right. `--dry-run`
+   runs every local check in step 5 and stops before anything is dispatched:
+
+   ```bash
+   syn workflow run <workflow-id> -t "Fix the auth timeout" -R owner/repo --dry-run
+   ```
+
+5. Run it, and read every warning, because the CLI warns only when something
+   you typed will not reach the agent:
+
+   ```bash
+   syn workflow run <workflow-id> -t "Fix the auth timeout" -R owner/repo
+   syn workflow run <workflow-id> -t "Review PR 42" -R owner/repo -i base_branch=develop
+   syn run <workflow-id> -t "Implement retry logic"   # shortcut for `syn workflow run`
+   ```
+
+   | situation | result |
+   |---|---|
+   | a required input with no default is missing | error, nothing runs |
+   | `-i repos=...` or `-i repository=...` | error: use `-R` |
+   | `-t` given, but no phase prompt consumes the task | **error**: the task would be discarded |
+   | a phase consumes the task, none supplied, no default | warning: it will render empty |
+   | an `--input` no phase prompt references | warning: it will be discarded |
+   | `-R` given, but the workflow does not clone repos | warning: the repos will not be cloned |
+
+   On success it prints `Execution ID: exec-...` and the deployment it ran
+   on. From here the run belongs to execution-control.
+
+6. To see a workflow's past runs, use `syn workflow status <workflow-id>`. It
+   takes a workflow id, not an execution id.
+
+7. To register a definition, validate it with
+   `syn workflow validate ./my-workflow.yaml` (a single file) or
+   `syn workflow validate ./my-package/` (a package directory), then register
+   it by what you have:
+
+   | you have | register with |
+   |---|---|
+   | one self-contained YAML file | `syn workflow create "<name>" --from ./my-workflow.yaml` |
+   | a package directory, or phases that use `prompt_file` | `syn workflow install ./my-package/` |
+   | a git URL, `org/repo`, or a marketplace name | `syn workflow install <source>` (add `--ref <branch-or-tag>` to pin; default `main`) |
+
+   The YAML `id` is the platform id, so registering a definition whose id
+   already exists updates that workflow instead of creating a second one.
+   Flag details for `create` and `install` are in
+   [references/registering-and-updating.md](references/registering-and-updating.md).
+
+8. To update a workflow in place, re-register it the same way it was first
+   registered, because `create --from` and `install` record different
+   provenance:
+   - first registered with `create --from`: re-run the same `create --from`;
+   - first registered with `install` from a directory: bump `version` in the
+     package manifest (`syntropic137-plugin.json`) and re-run
+     `syn workflow install <dir>`, or re-run it with `--force` to overwrite
+     the same version;
+   - first installed from git or a marketplace:
+     `syn workflow update <package-name>` (accepts `--ref`, `--dry-run`,
+     `--force`).
+
+   If a refusal comes back, look it up in
+   [references/registering-and-updating.md](references/registering-and-updating.md)
+   before reaching for `--force`.
+
+9. To archive or remove:
+
+   ```bash
+   syn workflow delete <workflow-id> --force          # archive (soft delete)
+   syn workflow uninstall <package-name>               # remove an installed package and archive its workflows
+   syn workflow uninstall <package-name> --keep-workflows
+   ```
+
+   `delete` refuses without `--force`. Archived workflows stay visible with
+   `syn workflow list --include-archived`, and reinstalling one restores it.
+
+## Output
+
+- After a run: the `exec-...` execution id and the deployment it ran on,
+  reported to the caller, plus every warning the CLI printed and whether it
+  was accepted on purpose.
+- After a dry run: the preview and check results; nothing dispatched.
+- After registering or updating: the workflow id, unchanged for an update.
+- After deleting or uninstalling: the workflow archived, visible under
+  `--include-archived`, and restorable by reinstalling.
 
 ## Outcomes we are looking for
 
@@ -26,8 +179,6 @@ exists to make that impossible.
   consumes the task.
 - *Signal:* the run command produced no warnings, or each warning was read
   and accepted on purpose.
-- *Signal:* the caller reports the execution id it got back, and the
-  deployment it ran on.
 
 ### Outcome 2: a changed workflow updates in place
 
@@ -40,35 +191,6 @@ exists to make that impossible.
 
 - *Signal:* deleting a workflow is understood as archiving it, done with an
   explicit confirmation, and reversible by reinstalling.
-
-## Before you start
-
-Every command talks to one deployment over HTTP. Check which one before
-acting, because the same workflow id can resolve to different definitions on
-different hosts:
-
-```bash
-syn config show     # SYN_API_URL, and whether credentials are set
-syn health          # is that deployment reachable and healthy
-```
-
-`SYN_API_URL` defaults to `http://localhost:8137`. Credentials are
-`SYN_API_TOKEN` (bearer) or `SYN_API_USER` + `SYN_API_PASSWORD` (basic). If
-`syn` is not installed: `npx @syntropic137/setup cli`.
-
-## Principles
-
-- **Read before you run.** `syn workflow show <id>` is cheap; a misdirected
-  run is not.
-- **Repositories are not inputs.** They travel on `-R`. `repos` and
-  `repository` are rejected as `--input` keys.
-- **The YAML `id` is the platform id.** Registering a definition whose id
-  already exists updates that workflow; it does not create a second one.
-- **Register the way it was first registered.** `create --from` and
-  `install` record different provenance and are not interchangeable for
-  updates.
-- **Warnings are findings.** The CLI warns only when something you typed will
-  not reach the agent.
 
 ## Anti-patterns
 
@@ -87,171 +209,52 @@ syn health          # is that deployment reachable and healthy
 - **Answering a provenance refusal with `--force`.** It does not bypass that
   refusal, and the refusal is correct.
 
-## The procedure
+## Recommended tools and practices (as of 2026-10-04)
 
-### 1. Find the workflow
+### Outcome: the run that starts is the run that was asked for
 
-```bash
-syn workflow list                     # registered on this deployment, runnable
-syn workflow list --include-archived  # also archived (deleted) templates
-syn workflow packages                 # packages this machine installed, with version and source
-```
+- **`syn workflow show` before every unfamiliar run.** Ladders up by putting
+  the declared inputs, their defaults and the phases in front of the caller
+  before any money is spent. Tradeoffs: one extra call; it is cheap and a
+  misdirected run is not.
+- **`syn workflow run ... --dry-run`.** Ladders up by running the
+  pre-dispatch checks (discarded task, discarded input, uncloned repos)
+  without dispatching. Tradeoffs: none beyond the call.
+- **The CLI over a direct `POST /workflows/{id}/execute`.** Ladders up
+  because the HTTP path skips the CLI's pre-dispatch checks, so a direct
+  `POST` will start a run whose task or inputs are discarded without warning.
+  Tradeoffs: when structured output is needed, use the HTTP surface in
+  [references/http-api.md](references/http-api.md), after a dry run.
+- **`syn workflow list` to find what the deployment can run, not
+  `syn workflow search` or `syn workflow info`.** Ladders up because those two
+  search configured marketplaces, not the deployment.
 
-`syn workflow list` prints ONE page of `GET /workflows` and does not paginate. Before concluding a workflow is absent, try `syn workflow show <workflow-id>`, or page the HTTP endpoint (`page=N&page_size=100`, see below) until a page comes back short.
+### Outcome: a changed workflow updates in place
 
-`packages` reads local install history (under `~/.syntropic137/workflows/`,
-or `$SYN_CONFIG_DIR`), not the deployment. A package can be listed there and
-missing from the deployment, or the reverse.
+- **The registration-path table in step 7 and the refusal table in
+  [references/registering-and-updating.md](references/registering-and-updating.md).**
+  Ladders up by mapping each refusal message to the registration path that
+  answers it. Tradeoffs: the refusal texts are matched on substrings and will
+  drift with the CLI; `syn workflow <subcommand> --help` is authoritative for
+  the installed version.
 
-### 2. Read what it needs
+### Outcome: nothing is lost by accident
 
-```bash
-syn workflow show <workflow-id>       # a unique prefix of the id is accepted
-```
+- **`syn workflow delete --force` as the only delete path.** Ladders up
+  because the explicit `--force` is the confirmation, and the result is an
+  archive, not an erasure. **`uninstall --keep-workflows`** keeps the
+  registered workflows when only the local package should go.
 
-This prints the id, name, type, classification, each phase with its model,
-and each declared input marked `[required]` or `[optional]`, with its
-description and default. An input that is required and has no default must
-be supplied.
+## References
 
-### 3. Rehearse the run
+- [references/registering-and-updating.md](references/registering-and-updating.md):
+  `create` and `install` flags, and every provenance refusal with what it
+  means. Read when registering or when an update is refused.
+- [references/http-api.md](references/http-api.md): the HTTP endpoints behind
+  the CLI, with query parameters and request bodies. Read when you need
+  structured output or the CLI is unavailable.
 
-```bash
-syn workflow run <workflow-id> -t "Fix the auth timeout" -R owner/repo --dry-run
-```
+## Continual improvement
 
-`--dry-run` (`-n`) runs every local check below and stops before anything is
-dispatched. Use it whenever the inputs are not obviously right.
-
-### 4. Run it
-
-```bash
-syn workflow run <workflow-id> -t "Fix the auth timeout" -R owner/repo
-syn workflow run <workflow-id> -t "Review PR 42" -R owner/repo -i base_branch=develop
-syn run <workflow-id> -t "Implement retry logic"   # shortcut for `syn workflow run`
-```
-
-| flag | supplies |
-|---|---|
-| `-t`, `--task` | the task, which phase prompts read as `$ARGUMENTS` or `{{task}}` |
-| `-i`, `--input key=value` | any other declared input; repeatable |
-| `-R`, `--repo` | a repository; repeatable; `owner/repo`, a full GitHub URL, or a `repo-...` id from `syn repo list` |
-| `-n`, `--dry-run` | check everything, dispatch nothing |
-| `-q`, `--quiet` | skip the run preview |
-
-What the CLI checks before dispatching, and what each outcome means:
-
-| situation | result |
-|---|---|
-| a required input with no default is missing | error, nothing runs |
-| `-i repos=...` or `-i repository=...` | error: use `-R` |
-| `-t` given, but no phase prompt consumes the task | **error**: the task would be discarded |
-| a phase consumes the task, none supplied, no default | warning: it will render empty |
-| an `--input` no phase prompt references | warning: it will be discarded |
-| `-R` given, but the workflow does not clone repos | warning: the repos will not be cloned |
-
-On success it prints `Execution ID: exec-...` and the deployment it ran on.
-From here the run belongs to execution-control.
-
-### 5. Look at a workflow's past runs
-
-```bash
-syn workflow status <workflow-id>     # run history for this workflow
-```
-
-### 6. Validate and register a definition
-
-```bash
-syn workflow validate ./my-workflow.yaml     # a single file
-syn workflow validate ./my-package/          # a package directory
-```
-
-Then register it, choosing the path by what you have:
-
-| you have | register with |
-|---|---|
-| one self-contained YAML file | `syn workflow create "<name>" --from ./my-workflow.yaml` |
-| a package directory, or phases that use `prompt_file` | `syn workflow install ./my-package/` |
-| a git URL, `org/repo`, or a marketplace name | `syn workflow install <source>` (add `--ref <branch-or-tag>` to pin; default `main`) |
-
-Notes on `create`:
-
-- `--from` takes a `.yaml` or `.yml` file, not a directory. The deployment
-  rejects a file whose `prompt_file` it cannot resolve; install the package
-  instead.
-- The positional name overrides the name in the YAML.
-- Without `--from`, `create` builds a minimal workflow from flags (`--type`,
-  `--description`, `--repo`, `--ref`, `--repos`, `--no-repos`); those flags
-  conflict with `--from`.
-
-`install --dry-run` (`-n`) shows what would be registered without
-registering it.
-
-### 7. Update a workflow in place
-
-Re-register it the same way it was first registered:
-
-- **First registered with `create --from`:** re-run the same `create --from`.
-- **First registered with `install` from a directory:** bump `version` in the
-  package manifest (`syntropic137-plugin.json`) and re-run
-  `syn workflow install <dir>`, or re-run it with `--force` to overwrite the
-  same version. A package with no manifest is recorded as version `0.0.0`.
-- **First installed from git or a marketplace:**
-  `syn workflow update <package-name>` (accepts `--ref`, `--dry-run`,
-  `--force`).
-
-The refusals you can hit, and what each one means:
-
-| message contains | meaning | do |
-|---|---|---|
-| `version X is already installed. Pass --force to reinstall it.` | same version, changed content | bump the version, or `--force` if overwriting is intended |
-| `resolves to a different source than the installed copy` | same version, different source digest | confirm the source is the one you meant, then `--force` |
-| `is installed with version ..., but this install declares no version. Refusing to overwrite recorded provenance with nothing.` | it was installed with `install`, and you are updating it with `create --from` | use `syn workflow install <dir> --force`. `--force` does not bypass this refusal from `create`, and `version:` is not a valid YAML key |
-| the same refusal naming `source digest` | as above, for the source digest | as above |
-
-A byte-identical reinstall is reported as already installed and changes
-nothing. Reinstalling an archived workflow restores it.
-
-### 8. Archive or remove
-
-```bash
-syn workflow delete <workflow-id> --force          # archive (soft delete)
-syn workflow uninstall <package-name>               # remove an installed package and archive its workflows
-syn workflow uninstall <package-name> --keep-workflows
-```
-
-`delete` refuses without `--force`. Archived workflows stay visible with
-`syn workflow list --include-archived`, and reinstalling one restores it.
-
-## Recommended tools and practices (as of 2026-10-03)
-
-The CLI is the primary surface. When an agent needs structured output or the
-CLI is unavailable, the same operations are HTTP calls against
-`$SYN_API_URL/api/v1`, with the `Authorization` header that matches the
-credentials in use:
-
-```bash
-AUTH="Authorization: Bearer $SYN_API_TOKEN"
-curl -sf -H "$AUTH" "$SYN_API_URL/api/v1/workflows?include_archived=false&page=1&page_size=50"
-curl -sf -H "$AUTH" "$SYN_API_URL/api/v1/workflows/<workflow-id>"
-curl -sf -H "$AUTH" "$SYN_API_URL/api/v1/workflows/<workflow-id>/runs"
-curl -sf -H "$AUTH" -H "Content-Type: application/json" \
-  -X POST "$SYN_API_URL/api/v1/workflows/<workflow-id>/execute" \
-  -d '{"task": "Fix the auth timeout", "inputs": {"base_branch": "develop"}, "repos": ["owner/repo"]}'
-```
-
-| endpoint | notes |
-|---|---|
-| `GET /workflows` | query params `workflow_type`, `include_archived`, `page`, `page_size`, `order_by`. There is no free-text search parameter. |
-| `GET /workflows/{id}` | the detail `syn workflow show` reads, including `input_declarations` and `phases` |
-| `GET /workflows/{id}/runs` | the history `syn workflow status` reads |
-| `POST /workflows/{id}/execute` | body `inputs` (string to string), `task`, `repos`. Returns `execution_id`, `workflow_id`, `status` (`started`), `message`. |
-
-The HTTP path skips the CLI's pre-dispatch checks in step 4, so a direct
-`POST` will start a run whose task or inputs are discarded without warning.
-Run `syn workflow run ... --dry-run` first if you can.
-
-`syn workflow search` and `syn workflow info` search configured marketplaces,
-not the deployment; use `syn workflow list` to find what the deployment can
-run. Run `syn workflow <subcommand> --help` for the full flag list of the
-installed CLI version.
+File drift, gaps, or proposed updates at
+https://github.com/syntropic137/syntropic137-skills/issues
