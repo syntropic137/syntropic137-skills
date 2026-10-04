@@ -35,7 +35,7 @@ only (see the README).
 | `skills/workflow-management/SKILL.md` | **merge**, split in two | CLI usage, registering and updating in place, the provenance refusals: merged into `skills/syn-workflow/SKILL.md` (this PR). YAML schema, phase design and prompt authoring: **migrated** to `skills/authoring-workflows/SKILL.md` | Every schema key in the authoring half was checked against the workflow definition models on main; see "Stale instructions corrected" for what changed. |
 | `skills/execution-control/SKILL.md` | **migrate (this PR)** | `skills/execution-control/SKILL.md` | Rewritten. Stale items corrected below. |
 | `skills/syn-control/SKILL.md` | **merge (this PR)** | `skills/execution-control/SKILL.md` | Its cancel, stop, status and resume content overlapped entirely with execution-control. |
-| `skills/troubleshooting-workflow-failures/SKILL.md` | **merge**, split in two | The diagnostic flow (read the execution, classify the failure, read the session, decide): merged into `skills/execution-control/SKILL.md` step 6 (this PR). `just health-check`, `just workspace-build` and local-stack fixes: move to contributor docs, `syntropic137/syntropic137` `docs/` | Only the steps that work against a deployed system were kept. |
+| `skills/troubleshooting-workflow-failures/SKILL.md` | **merge**, split in two | The diagnostic flow (read the execution, classify the failure, read the session, decide): merged into `skills/execution-control/SKILL.md` Workflow step 6 (this PR). `just health-check`, `just workspace-build` and local-stack fixes: move to contributor docs, `syntropic137/syntropic137` `docs/` | Only the steps that work against a deployed system were kept. |
 | `skills/observability/SKILL.md` | **migrated** | `skills/observing-sessions/SKILL.md` | Rewritten. Session, tool, token and cost observation through `syn sessions`, `syn observe`, `syn costs`, `syn metrics`. The two-lane architecture and event pipeline internals move to contributor docs. Stale items corrected below. |
 | `skills/syn-insights/SKILL.md` | **merged** | `skills/observing-sessions/SKILL.md` | Same surface as observability, CLI-shaped. `syn insights` is in the skill's view table. |
 | `skills/session-discovery/SKILL.md` | **migrated** | `skills/discovering-run-sessions/SKILL.md` | Rewritten. Finding every session of a run (`syn execution sessions`, transcripts). Its learning-loop section is **retired** in favour of `skills/mining-session-logs`, which already owns that job; no competing session-mining skill is created. |
@@ -46,7 +46,7 @@ only (see the README).
 | `skills/github-automation/SKILL.md` | **migrated** | `skills/github-triggers/SKILL.md` | Rewritten. Trigger rules and their history through `syn triggers` and the API. GitHub App installation, webhook tunnelling, Smee and `just` recipes move to contributor docs. Stale items corrected below. |
 | `skills/syn-triggers/SKILL.md` | **merged** | `skills/github-triggers/SKILL.md` | CLI-shaped subset of github-automation. |
 | `skills/platform-ops/SKILL.md` | **move to contributor docs** | `syntropic137/syntropic137` `docs/` | Operating the platform's own stack (Docker Compose, `just`, service internals) is contributor knowledge, not product use. |
-| `skills/setup/SKILL.md` | **split** | Dev-environment setup: move to contributor docs. Self-host install: stays with the plugin's `/syn-setup` adapter and the public docs site. Connection prerequisites (`SYN_API_URL`, credentials, `syn config show`, `syn health`): carried in the "Before you start" section of every migrated skill (this PR does so for both) | A consumer skill cannot run an installer that needs secrets typed outside the agent's context; the plugin's `!`-prefixed pattern is Claude-specific. |
+| `skills/setup/SKILL.md` | **split** | Dev-environment setup: move to contributor docs. Self-host install: stays with the plugin's `/syn-setup` adapter and the public docs site. Connection prerequisites (`SYN_API_URL`, credentials, `syn config show`, `syn health`): carried in the `## Input` section and the first `## Workflow` step of every migrated skill | A consumer skill cannot run an installer that needs secrets typed outside the agent's context; the plugin's `!`-prefixed pattern is Claude-specific. |
 
 ## Commands (12): keep as harness adapters
 
@@ -61,7 +61,7 @@ in the plugin repo; only those marked *verified* were checked in this PR.
 | `commands/syn-workflows.md` | keep as harness adapter | `skills/syn-workflow` | Maps `search` to `syn workflow search`, which searches marketplaces, not the deployment; its fallback `GET /workflows?q=` has no such parameter (*verified*). |
 | `commands/syn-executions.md` | keep as harness adapter | `skills/execution-control` | Maps `status <id>` to `syn workflow status <id>`, which takes a workflow id, not an execution id; its fallback `/api/v1/executions/<id>/status` does not exist (*verified*). Use `syn execution show` or `/executions/<id>/state`. |
 | `commands/syn-status.md` | keep as harness adapter | `skills/execution-control`, `skills/observing-sessions` | Not verified in this PR. |
-| `commands/syn-health.md` | keep as harness adapter | every skill's "Before you start" (`syn health`) | Not verified in this PR. |
+| `commands/syn-health.md` | keep as harness adapter | every skill's `## Input` and first `## Workflow` step (`syn health`) | Not verified in this PR. |
 | `commands/syn-sessions.md` | keep as harness adapter | `skills/observing-sessions` | The command itself was not verified; the stale items found in the observability skill below are likely to recur in it. |
 | `commands/syn-observe.md` | keep as harness adapter | `skills/observing-sessions` | The command itself was not verified; the stale items found in the observability skill below are likely to recur in it. |
 | `commands/syn-costs.md` | keep as harness adapter | `skills/observing-sessions` | The command itself was not verified; the stale items found in the observability skill below are likely to recur in it. |
@@ -74,15 +74,15 @@ in the plugin repo; only those marked *verified* were checked in this PR.
 
 | plugin path | disposition | knowledge lives in | notes |
 |---|---|---|---|
-| `agents/execution-monitor.md` | keep as harness adapter | `skills/execution-control` (steps 2 and 3: read, follow live, confirm) | A Claude subagent definition (model, disallowed tools). Its fixed cost alert thresholds are policy, not product, and were not carried into the skill. It references `/syn-observe`, a slash command. |
-| `agents/security-reviewer.md` | keep as harness adapter | `skills/workflow-marketplace` (migrated): step 3, review a package before installing it | A Claude subagent definition (model, allowed tools). |
+| `agents/execution-monitor.md` | keep as harness adapter | `skills/execution-control` (Workflow steps 3, 4 and 9: read, follow live, confirm) | A Claude subagent definition (model, disallowed tools). Its fixed cost alert thresholds are policy, not product, and were not carried into the skill. It references `/syn-observe`, a slash command. |
+| `agents/security-reviewer.md` | keep as harness adapter | `skills/workflow-marketplace` (migrated): Workflow step 4, review a package before installing it | A Claude subagent definition (model, allowed tools). |
 
 ## Hooks: keep as harness adapter
 
 | plugin path | disposition | knowledge lives in | notes |
 |---|---|---|---|
 | `hooks/hooks.json` | keep as harness adapter | n/a | Registers a Claude Code `SessionStart` hook. Codex has no equivalent. |
-| `hooks/handlers/session-start.py` | keep as harness adapter | every skill's "Before you start" (`syn health`, `syn config show`) | Calls the health endpoint and suggests `/syn-setup` and `/syn-status` on failure. Resolved through `CLAUDE_PLUGIN_ROOT`. |
+| `hooks/handlers/session-start.py` | keep as harness adapter | every skill's `## Input` and first `## Workflow` step (`syn health`, `syn config show`) | Calls the health endpoint and suggests `/syn-setup` and `/syn-status` on failure. Resolved through `CLAUDE_PLUGIN_ROOT`. |
 
 ## Manifest and other files
 
@@ -91,7 +91,7 @@ in the plugin repo; only those marked *verified* were checked in this PR.
 | `.claude-plugin/plugin.json` | keep in the plugin | Claude Code plugin manifest (name `syntropic137`, version `0.12.4`, `commands` and `skills` paths). When migrated skills are removed from the plugin, its `skills` path should instead point at, or vendor, this repo. |
 | `.claude-plugin/marketplace.json` | keep in the plugin | Follow-up: its plugin entry says version `0.9.0`, stale against `plugin.json`'s `0.12.4`. |
 | `CLAUDE.md`, `README.md`, `SECURITY.md` | keep in the plugin | Describe the plugin itself. `SECURITY.md`'s rule that secrets never enter the context window applies to every skill here too, and none of the migrated skills asks for a secret value. |
-| `scripts/validate_yaml_examples.py` | keep in the plugin | Validates the plugin's YAML examples against the platform schema. `skills/authoring-workflows` now has YAML examples too; its complete example was checked with `WorkflowDefinition.from_yaml` and `validate_workflow_yaml` on main, but this repo has no automated check for it yet. |
+| `scripts/validate_yaml_examples.py` | keep in the plugin | Validates the plugin's YAML examples against the platform schema. `skills/authoring-workflows` now has YAML examples too; its complete example (`skills/authoring-workflows/references/example.md`) was checked with `WorkflowDefinition.from_yaml` and `validate_workflow_yaml` on main, but this repo has no automated check for it yet. |
 | `scripts/syn137-banner-claude-plugin.html`, `public/assets/` | keep in the plugin | Branding assets. |
 | `.github/workflows/` | keep in the plugin | Plugin tagging and version checks. Not touched. |
 | `.gitattributes`, `.gitignore` | keep in the plugin | Repo housekeeping. |
@@ -336,7 +336,7 @@ main. What changed:
 1. `type` presented as a validated enum: it is free text, and a value
    outside the six known types is stored as `custom` without an error.
 2. `requires_repos` "inferred when omitted": it defaults to true when
-   omitted. Stated as Trap 1.
+   omitted. Stated as Trap 1 (`references/traps.md`).
 3. `can_open_pr` "inert since #1478 ... (#1492)": it is retired, accepted,
    dropped and reported as a notice. Stated without issue numbers.
 4. "A codex phase with no model lands in `unpriced_tokens`": no such field,
@@ -350,8 +350,8 @@ main. What changed:
    Replaced with "a concrete model id".
 8. `allowed_tools` under `agent:`: not in the source, but the most common
    failure (#1081). The agent block forbids unknown keys, so it is rejected.
-   Stated as Trap 3, with a wrong and right example.
-9. `$ARGUMENTS` source: stated only in passing. Stated as Trap 2, including
+   Stated as Trap 3 (`references/traps.md`), with a wrong and right example.
+9. `$ARGUMENTS` source: stated only in passing. Stated as Trap 2 (`references/traps.md`), including
    the refusal of `-t` when no prompt consumes the task. The first draft of
    this migration said only `-t` fills it (caught in verification):
    `-i task=value` also does, `-t` wins when both are passed, and a
@@ -368,6 +368,27 @@ main. What changed:
     rejected `max_tokens`, so an untouched scaffold fails validation. The
     skill tells authors to delete that line first. The generator itself
     still needs fixing in the product.
+
+## Skill structure
+
+Every skill in this repo, migrated or pre-existing (`mining-session-logs`),
+follows the procedural shape of the
+[authoring-skills](https://github.com/AgentParadise/agentic-skills/tree/main/skills/meta/authoring-skills)
+chassis: `## When to Use`, `## When NOT to Use`, `## Input`, a numbered
+`## Workflow`, `## Output`, `## Outcomes we are looking for` (one or two
+signals each), `## Anti-patterns`, a dated
+`## Recommended tools and practices` grouped under the outcome each item
+serves, `## References` and `## Continual improvement`. Depth most
+invocations do not need (HTTP API tables, long enumerations, refusal tables,
+`authoring-workflows`' schema, traps and worked example) lives in
+`skills/<name>/references/*.md`, linked from the body. Step numbers cited in
+this document are `## Workflow` steps.
+
+The routing boundary between `execution-control` and `observing-sessions` is
+stated in both descriptions: `execution-control` is the first stop for why an
+EXECUTION failed (its failing phase, classification, cancel, resume);
+`observing-sessions` covers SESSION-level telemetry (tool timeline, tokens,
+cost) once the session is known.
 
 ## Verification against `syntropic137/syntropic137` main
 
@@ -476,6 +497,8 @@ API is `apps/syn-api/src/syn_api/`, abbreviated `api/`.
 | placeholders `{{execution_id}}`, `{{workflow_id}}`, `{{repo_url}}`, deprecated `{{repository}}`, inputs, `{{<phase-id>}}` and appendix cut to 2000, `$ARGUMENTS` from `task`; `{{repos}}` from `-R` | `apps/syn-api/src/syn_api/_wiring.py`; `WorkflowExecutionProcessor` |
 | `task` from `-t`, else `-i task=`, else the declared `task` default; `-t` wins over `-i task=`; with no task `$ARGUMENTS` renders empty and `{{task}}` stays literal | `cli/workflow/run.ts` (sends `inputs` and `task`); `api/routes/executions/commands.py` (`_merge_inputs`); `_wiring.py` (`_substitute_inputs`), called directly on main |
 | assign refused when already assigned; unassign refused when unassigned; duplicate registration refused | organization context repo aggregate; `api/routes/repos.py` (409) |
+| `DELETE /triggers/{id}` and `syn triggers delete` are a soft delete: the rule's status becomes `deleted`, the rule is not erased, and no route restores it | `api/routes/triggers/commands.py` (`delete_trigger`, "Soft-delete a trigger rule"); `TriggerRuleAggregate` (`TriggerStatus.DELETED`); no restore or undelete handler. Re-checked at `5026ecc2635274fa96cff6bd00de333c093f401c` |
+| operation `tool_input` and `tool_output` are previews cut to 500 characters; `tool_input` is an object when the preview parses as JSON, else `{"raw": "<preview>"}` | `RecordOperationHandler.py` (`_preview`, `_MAX_PREVIEW_LEN = 500`); `api/routes/sessions.py` (`_parse_tool_input`). Checked at `5026ecc2635274fa96cff6bd00de333c093f401c` |
 | no automatic repo registration from GitHub events | `POST /repos` is the only registration route; `syn repo register` its only caller |
 
 ## Harness discovery
