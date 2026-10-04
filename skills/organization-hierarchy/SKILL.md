@@ -18,6 +18,123 @@ rolled up per repo and per system. It does not gate what runs. A workflow
 runs against any repository passed with `-R`, registered or not, and a
 trigger fires for its repository whether or not that repo has a system.
 
+## When to Use
+
+- You are creating an organization or a system, or registering a repository.
+- You are assigning a repo to a system, or moving it between systems.
+- You want health, cost or activity rolled up per repo or per system: which
+  system is failing, which repo costs the most.
+- You want to know which repositories the GitHub App can see.
+
+## When NOT to Use
+
+- You want to run a workflow: use syn-workflow.
+- You want trigger rules on a repo: use github-triggers.
+- You need to install or configure the GitHub App itself: that is deployment
+  setup.
+- You want the cost and token breakdown of one execution or session: use
+  observing-sessions.
+
+## Input
+
+- **Deployment** (required, environment): `SYN_API_URL`, default
+  `http://localhost:8137`. Credentials are `SYN_API_TOKEN` (bearer) or
+  `SYN_API_USER` + `SYN_API_PASSWORD` (basic). If `syn` is not installed:
+  `npx @syntropic137/setup cli`.
+- **Ids, not names.** Every command after `create` takes the id printed at
+  creation (`org-...`, `system-...`, `repo-...`). List to find one.
+- **Repository** (`owner/repo`, to register): worth registering when the
+  GitHub App can reach it.
+- **Organization id** (optional for `register` when the deployment has
+  exactly one organization).
+
+## Workflow
+
+1. Check the deployment, and which repositories its GitHub App can reach,
+   which is the set worth registering:
+
+   ```bash
+   syn config show                        # SYN_API_URL, and whether credentials are set
+   syn health                             # is that deployment reachable and healthy
+   syn github repos                       # every repo across installations
+   syn github repos -i <installation-id>  # one installation (--installation)
+   ```
+
+2. Create the organization:
+
+   ```bash
+   syn org create --name "Acme Corp" --slug acme      # -n, -s
+   syn org list
+   syn org show <org-id>
+   syn org update <org-id> --name "Acme Inc"
+   syn org delete <org-id> --force                    # -f
+   ```
+
+3. Create systems in it:
+
+   ```bash
+   syn system create --name "Payments" --org <org-id> --description "Billing and invoicing"   # -n, -o (required), -d
+   syn system list --org <org-id>
+   syn system show <system-id>
+   syn system update <system-id> --name "Billing"
+   syn system delete <system-id> --force
+   ```
+
+4. Register repositories. **Registration is explicit**: repositories are not
+   registered for you when the GitHub App sees them, and `syn repo register`
+   is how a repo enters the hierarchy.
+
+   ```bash
+   syn repo register --url acme/billing-api --org <org-id>    # -u, -o
+   syn repo list --org <org-id>
+   syn repo show <repo-id>
+   ```
+
+   `--org` may be omitted when the deployment has exactly one organization;
+   it is then used. With several organizations, `register` asks you to pass
+   one. With none, the repo is registered as unaffiliated. Registering the
+   same repo twice is refused as already registered.
+
+5. Assign repos to systems. **One system per repo**: a repo is in at most one
+   system, so moving it is an unassign followed by an assign.
+
+   ```bash
+   syn repo assign <repo-id> --system <system-id>    # -s
+   syn repo unassign <repo-id>
+   syn repo list --system <system-id>
+   ```
+
+6. Read the rollups:
+
+   ```bash
+   syn system status <system-id>      # healthy, degraded or failing; per repo status, success rate, last run
+   syn system cost <system-id>        # total cost and tokens, cost by repo
+   syn system activity <system-id>    # recent executions (-n, default 20)
+   syn system history <system-id>     # longer execution history (-n, default 50)
+   syn system patterns <system-id>    # recurring failures and cost outliers
+
+   syn repo health <repo-id>          # success rate, trend, last run
+   syn repo cost <repo-id>
+   syn repo activity <repo-id>        # -n, default 20
+   syn repo failures <repo-id>        # recent failures with error messages (-n, default 10)
+   syn repo sessions <repo-id>        # agent sessions for this repo (-n, default 20)
+   ```
+
+   **Costs are keyed by repository name.** Repo and system cost come from
+   executions whose repository matches the registered `owner/repo` name, so
+   they include runs from before the repo was registered or assigned. To
+   drill from a rollup into one run, take its execution id to
+   execution-control or observing-sessions.
+
+## Output
+
+- The ids created (`org-...`, `system-...`, `repo-...`), and
+  `syn repo list --system <system-id>` showing the repos that belong
+  together.
+- For a rollup question: the figure from `syn system status`,
+  `syn system cost` or `syn repo cost`, with the system or repo named.
+- For a refusal: its reason and the current state that explains it.
+
 ## Outcomes we are looking for
 
 ### Outcome 1: every repo you care about is registered and in the right system
@@ -37,38 +154,6 @@ trigger fires for its repository whether or not that repo has a system.
 - *Signal:* a "already assigned" or "already registered" refusal leads to
   reading the current state, then a deliberate unassign or no action.
 
-## Before you start
-
-```bash
-syn config show     # SYN_API_URL, and whether credentials are set
-syn health          # is that deployment reachable and healthy
-```
-
-`SYN_API_URL` defaults to `http://localhost:8137`. Credentials are
-`SYN_API_TOKEN` (bearer) or `SYN_API_USER` + `SYN_API_PASSWORD` (basic). If
-`syn` is not installed: `npx @syntropic137/setup cli`.
-
-To see which repositories the deployment's GitHub App can reach, which is the
-set worth registering:
-
-```bash
-syn github repos                       # every repo across installations
-syn github repos -i <installation-id>  # one installation (--installation)
-```
-
-## Principles
-
-- **Registration is explicit.** Repositories are not registered for you when
-  the GitHub App sees them. `syn repo register` is how a repo enters the
-  hierarchy.
-- **One system per repo.** A repo is in at most one system. Moving it is an
-  unassign followed by an assign.
-- **Costs are keyed by repository name.** Repo and system cost come from
-  executions whose repository matches the registered `owner/repo` name, so
-  they include runs from before the repo was registered or assigned.
-- **Ids, not names.** Every command after `create` takes the id printed at
-  creation (`org-...`, `system-...`, `repo-...`). List to find one.
-
 ## Anti-patterns
 
 - **Passing `--system` to `syn repo register` and assuming it worked.** The
@@ -83,94 +168,43 @@ syn github repos -i <installation-id>  # one installation (--installation)
   the repo has active trigger rules. Pause or delete those first (see
   github-triggers).
 
-## The procedure
+## Recommended tools and practices (as of 2026-10-04)
 
-### 1. Create the organization
+### Outcome: every repo you care about is registered and in the right system
 
-```bash
-syn org create --name "Acme Corp" --slug acme      # -n, -s
-syn org list
-syn org show <org-id>
-syn org update <org-id> --name "Acme Inc"
-syn org delete <org-id> --force                    # -f
-```
+- **`syn github repos`, then `syn repo register`, then `syn repo assign`.**
+  Ladders up by registering from the set the App can actually reach and
+  assigning in a separate, checked step. Tradeoffs: `register --system` is
+  not applied, so the assign is always a second command.
+- **`GET /repos?unassigned=true`.** Ladders up by listing the repos still
+  outside any system. Tradeoffs: API only.
 
-### 2. Create systems in it
+### Outcome: a rollup question is answered from the rollup
 
-```bash
-syn system create --name "Payments" --org <org-id> --description "Billing and invoicing"   # -n, -o (required), -d
-syn system list --org <org-id>
-syn system show <system-id>
-syn system update <system-id> --name "Billing"
-syn system delete <system-id> --force
-```
+- **`syn system status`, `syn system cost`, `syn system patterns`.** Ladders
+  up by answering "which system" questions in one call. Tradeoffs: cost is
+  keyed by repository name and includes runs from before registration.
+- **`/insights/overview` and `/insights/cost`** for deployment wide rollups
+  across all organizations.
 
-### 3. Register repositories
+### Outcome: a refused change is understood, not retried
 
-```bash
-syn repo register --url acme/billing-api --org <org-id>    # -u, -o
-syn repo list --org <org-id>
-syn repo show <repo-id>
-```
+- **`syn repo show <repo-id>` before a second assign.** Ladders up by showing
+  the system a repo is already in. A refusal over the API is HTTP 409 with
+  the reason in `detail`.
 
-`--org` may be omitted when the deployment has exactly one organization; it
-is then used. With several organizations, `register` asks you to pass one.
-With none, the repo is registered as unaffiliated. Registering the same repo
-twice is refused as already registered.
-
-### 4. Assign repos to systems
-
-```bash
-syn repo assign <repo-id> --system <system-id>    # -s
-syn repo unassign <repo-id>
-syn repo list --system <system-id>
-```
-
-To move a repo: `unassign`, then `assign` to the new system.
-
-### 5. Read the rollups
-
-```bash
-syn system status <system-id>      # healthy, degraded or failing; per repo status, success rate, last run
-syn system cost <system-id>        # total cost and tokens, cost by repo
-syn system activity <system-id>    # recent executions (-n, default 20)
-syn system history <system-id>     # longer execution history (-n, default 50)
-syn system patterns <system-id>    # recurring failures and cost outliers
-
-syn repo health <repo-id>          # success rate, trend, last run
-syn repo cost <repo-id>
-syn repo activity <repo-id>        # -n, default 20
-syn repo failures <repo-id>        # recent failures with error messages (-n, default 10)
-syn repo sessions <repo-id>        # agent sessions for this repo (-n, default 20)
-```
-
-To drill from a rollup into one run, take its execution id to
-execution-control or observing-sessions.
-
-## Recommended tools and practices (as of 2026-10-03)
-
-The CLI is the primary surface. Every command is an HTTP call against
-`$SYN_API_URL/api/v1`:
-
-```bash
-AUTH="Authorization: Bearer $SYN_API_TOKEN"
-curl -sf -H "$AUTH" "$SYN_API_URL/api/v1/organizations"
-curl -sf -H "$AUTH" "$SYN_API_URL/api/v1/systems?organization_id=<org-id>"
-curl -sf -H "$AUTH" "$SYN_API_URL/api/v1/repos?unassigned=true"
-curl -sf -H "$AUTH" -H "Content-Type: application/json" \
-  -X POST "$SYN_API_URL/api/v1/repos/<repo-id>/assign" -d '{"system_id": "<system-id>"}'
-curl -sf -H "$AUTH" "$SYN_API_URL/api/v1/systems/<system-id>/status"
-curl -sf -H "$AUTH" "$SYN_API_URL/api/v1/insights/overview"
-```
-
-| endpoint | notes |
-|---|---|
-| `/organizations`, `/organizations/{id}` | create, list, show, update, delete |
-| `/systems`, `/systems/{id}` | list filter `organization_id`; plus `/status`, `/cost`, `/activity`, `/patterns`, `/history` |
-| `/repos`, `/repos/{id}` | list filters `organization_id`, `system_id`, `provider`, `unassigned`; plus `/assign` (body `system_id`), `/unassign`, `/health`, `/cost`, `/activity`, `/failures`, `/sessions` |
-| `DELETE /repos/{id}` | deregisters a repo; no CLI command. Refused (409) while it has active triggers |
-| `/insights/overview`, `/insights/cost`, `/insights/contribution-heatmap` | deployment wide rollups across all organizations |
-
-A refusal comes back as HTTP 409 with the reason in `detail`. Run
+Every route, its filters, and `DELETE /repos/{id}` (deregistering has no CLI
+command) are in [references/http-api.md](references/http-api.md). Run
 `syn org --help`, `syn system --help` and `syn repo --help` for the full flag
 list of the installed CLI version.
+
+## References
+
+- [references/http-api.md](references/http-api.md): the organization,
+  system, repo and insights routes with their filters. Read when you need
+  structured output, a filter the CLI lacks, or to deregister a repo.
+
+## Continual improvement
+
+File drift, gaps, or proposed updates at
+https://github.com/syntropic137/syntropic137-skills/issues
