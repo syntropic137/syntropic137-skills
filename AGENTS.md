@@ -20,9 +20,6 @@ construction and cannot be made agent-agnostic by relocating them.
 
 ## Authoring
 
-Follow the `authoring-skills` chassis: the description carries the routing
-(explicit trigger phrases, synonyms, and non-triggers), the body opens with what
-the skill is rather than when to use it, and durable outcomes precede any
-dated tool guidance so that tool churn cannot rot the whole file.
-
-Pin depth in `references/` rather than growing the body past ~500 lines.
+When creating or editing a skill, use the `authoring-skills` skill:
+https://github.com/AgentParadise/agentic-skills/tree/main/skills/meta/authoring-skills
+It is the source of truth for skill shape; do not restate its rules here.
