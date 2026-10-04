@@ -2,15 +2,27 @@
 
 Harness-agnostic skills for agents **using** a deployed Syntropic137 instance.
 
-Install with the [`skills`](https://www.npmjs.com/package/skills) CLI, which is how
-Syntropic137 itself installs them into a workspace:
+Install with the [`skills`](https://www.npmjs.com/package/skills) CLI:
 
 ```sh
-skills add syntropic137/syntropic137-skills/<skill-name> --agent <agent-key> -y
+# list what this repo offers
+npx skills add syntropic137/syntropic137-skills -l
+
+# install one skill for Claude Code and Codex
+npx skills add syntropic137/syntropic137-skills --skill <skill-name> -a claude-code -a codex -y
+
+# or every skill
+npx skills add syntropic137/syntropic137-skills --skill '*' -a claude-code -a codex -y
 ```
 
-`--agent` accepts `claude-code`, `codex`, `gemini-cli` and ~70 others. The same
-skill body serves every one of them.
+The skill is selected with `--skill`; an `owner/repo/<skill-name>` path does not
+work ("No skills found"). Add `-g` to install for your user instead of the current
+project. `-a` accepts `claude-code`, `codex`, `gemini-cli` and ~70 others, and the
+same skill body serves every one of them. Verified with `skills` 1.7.0:
+`claude-code` lands in `.claude/skills/`, `codex` in `.agents/skills/`.
+
+Syntropic137 workspaces use the same CLI, pointed at a local copy of the skill
+(`skills add <path-to-skill> --agent <agent> -y`).
 
 ## What belongs here, and what does not
 
