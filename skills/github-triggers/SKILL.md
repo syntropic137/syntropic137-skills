@@ -1,6 +1,6 @@
 ---
 name: github-triggers
-description: Use when making a Syntropic137 workflow run automatically on GitHub events, or managing the trigger rules that do so - registering a rule or enabling a built-in preset, choosing its event, conditions, input mapping and safety limits, pausing, resuming or deleting rules, and working out why a trigger did or did not fire. Trigger phrases include "run this workflow on every PR", "auto-fix failing CI", "self-healing", "respond to review comments", "/syn comment command", "set up a trigger", "why didn't my trigger fire", "trigger fired too often", "pause the trigger", "stop all triggers on this repo", "trigger history", "syn triggers". Do NOT use for starting a workflow by hand (use syn-workflow), for following or cancelling the executions a trigger started (use execution-control), or for installing the GitHub App or exposing a webhook URL, which is deployment setup rather than product use.
+description: Use when making a Syntropic137 workflow run automatically on GitHub events, or managing the trigger rules that do so - registering a rule or enabling a built-in preset, choosing its event, conditions, input mapping and safety limits, pausing, resuming or deleting rules, and working out why a trigger did or did not fire. Trigger phrases include "run this workflow on every PR", "set up a trigger on PR merge", "auto-fix failing CI", "self-healing", "respond to review comments", "/syn comment command", "set up a trigger", "why didn't my trigger fire", "trigger fired too often", "pause the trigger", "stop all triggers on this repo", "trigger history", "syn triggers". Do NOT use for starting a workflow by hand (use syn-workflow), for following or cancelling the executions a trigger started (use execution-control), or for installing the GitHub App or exposing a webhook URL, which is deployment setup rather than product use.
 ---
 
 # Running Syntropic137 workflows from GitHub events
@@ -17,6 +17,147 @@ second is a rule that fires and does nothing useful because no input mapping
 told the workflow which repository and pull request it was for. **Read the
 rule's history before changing it, and check that a fired run received the
 inputs it needed.**
+
+## When to Use
+
+- You want a workflow to run on a GitHub event: a pull request opened or
+  merged, a failing check, a review, a `/syn` comment.
+- You want to enable a built-in preset (`self-healing`, `review-fix`,
+  `comment-command`).
+- A trigger did not fire, fired too often, or fired and did nothing.
+- You need to pause, resume or delete trigger rules.
+
+## When NOT to Use
+
+- You want to start a workflow by hand: use syn-workflow.
+- You want to follow, cancel or diagnose the execution a trigger started:
+  use execution-control.
+- You need to install the GitHub App or expose a webhook URL: that is
+  deployment setup, not product use.
+
+## Input
+
+- **Deployment** (required, environment): `SYN_API_URL`, default
+  `http://localhost:8137`. Credentials are `SYN_API_TOKEN` (bearer) or
+  `SYN_API_USER` + `SYN_API_PASSWORD` (basic). Check with `syn config show`
+  and `syn health`. Name it: the workflow id only resolves there.
+- **Repository** (`owner/repo`, required): the deployment's GitHub App must be
+  installed on it; `syn github repos` lists the repositories it can reach.
+- **Workflow id** (required for a rule; optional for a preset): it must be
+  registered, `syn workflow list` (see syn-workflow).
+- **Event** (required for a rule): `<event>.<action>`, or the bare event name
+  when GitHub sends no action.
+- **Conditions** (optional): payload path, operator, value.
+- **Input mapping** (optional, API only): workflow input name to payload
+  path.
+- **Limits** (optional): `max_attempts`, `daily_limit`, `cooldown_seconds`.
+- **Trigger id** (for show, history, pause, resume, delete).
+
+## How a rule decides
+
+1. **Event and repository.** The incoming event is `<event>.<action>` when
+   GitHub sends an action (`pull_request.opened`, `check_run.completed`,
+   `issue_comment.created`) and the bare event name when it does not
+   (`push`). The repository is `owner/repo`. Both must equal the rule's,
+   exactly. A rule with event `pull_request` never matches an opened pull
+   request.
+2. **Conditions.** Every condition must hold. A condition is a dot-notation
+   path into the payload, an operator, and a value. Operators: `eq`, `neq`,
+   `in`, `not_in`, `contains`, `not_empty`, `is_empty`. Over the API a value
+   is a string: `"false"` and `"true"` compare as booleans, and `in` and
+   `not_in` take a comma-separated list. A miss is recorded as blocked by
+   `conditions_not_met`.
+3. **Safety guards**, each recorded by name when it blocks: `max_attempts`,
+   `cooldown`, `daily_limit`, `idempotency`, `concurrency` and
+   `dispatch_rate_limit`. What each one blocks is in
+   [references/guards-and-presets.md](references/guards-and-presets.md). A
+   blocked event is not retried later. Different rules do not block each
+   other on the same pull request.
+4. **Input mapping.** Each workflow input is read from a payload path, for
+   example `"pr_number": "pull_request.number"`. A path that resolves to
+   nothing is left out. An input named `repository` holding `owner/repo`
+   also becomes the repository the run checks out.
+
+## Workflow
+
+1. Check the deployment (`syn config show`, `syn health`), that the App
+   reaches the repository (`syn github repos`), and that the workflow is
+   registered (`syn workflow list`).
+
+2. Prefer a preset when one fits, because presets carry a tested event,
+   conditions, input mapping and limits:
+
+   ```bash
+   syn triggers enable self-healing -r owner/repo [-w <workflow-id>]
+   ```
+
+   The three presets, their events and mapped inputs are in
+   [references/guards-and-presets.md](references/guards-and-presets.md).
+   Without `-w`, a preset dispatches the deployment's `self-heal-pr`
+   workflow. Enabling the same preset twice on a repository is refused.
+
+3. Otherwise register a rule. The CLI registers the simple case:
+
+   ```bash
+   syn triggers register -r owner/repo -w <workflow-id> -e pull_request.opened \
+     -c pull_request.base.ref=main --max-attempts 3 --cooldown 300
+   ```
+
+   `-c field=value` repeats, and each is an `eq` condition. `--max-attempts`
+   defaults to 5 and `--cooldown` to 300 seconds. The CLI sends no input
+   mapping, a `daily_limit` of 20 and a generated name. With input mapping,
+   other operators, a name or a different daily limit, use `POST /triggers`;
+   a complete request body is in
+   [references/http-api.md](references/http-api.md).
+
+4. Read the rule back:
+
+   ```bash
+   syn triggers show <trigger-id>
+   syn triggers list -r owner/repo        # -s active|paused|deleted, -a includes deleted
+   ```
+
+5. If it did not fire, read `syn triggers history <trigger-id>` (`-n`,
+   default 20):
+   - **A `blocked` entry** names the guard and the reason.
+     `conditions_not_met` means the payload did not match: compare the
+     conditions in `syn triggers show` with the event's payload.
+   - **No entry at all** means no event reached this rule. Check the rule's
+     event spelling (`<event>.<action>`), its repository (`owner/repo`),
+     that it is `active`, and whether its event arrives without webhooks
+     (see the anti-patterns).
+
+6. If it fired and did nothing, the history's execution id is the run. Read
+   it with execution-control. Then read its `inputs` (`GET /executions/{id}`)
+   against the inputs the workflow needs: a missing input is a missing or
+   wrong `input_mapping` path.
+
+7. To stop a rule, pause before you delete, because pausing keeps the rule
+   and its history:
+
+   ```bash
+   syn triggers pause <trigger-id>
+   syn triggers resume <trigger-id>
+   syn triggers disable-all -r owner/repo --force   # pauses every active rule on the repository
+   syn triggers delete <trigger-id> --force         # soft delete; no command restores it
+   ```
+
+   `delete` and `disable-all` refuse without `--force`. `disable-all` pauses;
+   resume rules one by one. `delete` is a soft delete: the rule's status
+   becomes `deleted` and it stays listed with `syn triggers list -s deleted`
+   or `-a`, but it never fires again and there is no command or route that
+   restores it. To run the same thing again, register a new rule.
+
+## Output
+
+- A registered or enabled rule, read back with `syn triggers show`, with its
+  event, repository, conditions, input mapping and limits stated, and the
+  deployment named.
+- For a non-fire: the history entry's guard and reason, or the absence of
+  any entry and which of event, repository, status or delivery explains it.
+- For a fire that did nothing: the execution id and the input that was
+  missing from its `inputs`.
+- For a stopped rule: its status `paused` or `deleted`.
 
 ## Outcomes we are looking for
 
@@ -39,67 +180,6 @@ inputs it needed.**
 - *Signal:* a rule firing too often is paused, its history is read, and only
   then is it changed or deleted.
 
-## Before you start
-
-Every command talks to one deployment. Check which one:
-
-```bash
-syn config show     # SYN_API_URL and whether credentials are set
-syn health
-```
-
-`SYN_API_URL` defaults to `http://localhost:8137`. Credentials are
-`SYN_API_TOKEN` (bearer) or `SYN_API_USER` + `SYN_API_PASSWORD` (basic).
-
-The deployment's GitHub App must be installed on the repository:
-`syn github repos` lists the repositories it can reach. The workflow must be
-registered: `syn workflow list` (see the syn-workflow skill).
-
-## How a rule decides
-
-1. **Event and repository.** The incoming event is `<event>.<action>` when
-   GitHub sends an action (`pull_request.opened`, `check_run.completed`,
-   `issue_comment.created`) and the bare event name when it does not
-   (`push`). The repository is `owner/repo`. Both must equal the rule's,
-   exactly. A rule with event `pull_request` never matches an opened pull
-   request.
-2. **Conditions.** Every condition must hold. A condition is a dot-notation
-   path into the payload, an operator, and a value. Operators: `eq`, `neq`,
-   `in`, `not_in`, `contains`, `not_empty`, `is_empty`. Over the API a value
-   is a string: `"false"` and `"true"` compare as booleans, and `in` and
-   `not_in` take a comma-separated list. A miss is recorded as blocked by
-   `conditions_not_met`.
-3. **Safety guards**, each recorded by name when it blocks:
-
-| guard | blocks when |
-|---|---|
-| `max_attempts` | this rule has fired `max_attempts` times for this pull request |
-| `cooldown` | this rule fired for this pull request less than `cooldown_seconds` ago |
-| `daily_limit` | this rule has fired `daily_limit` times today |
-| `idempotency` | this delivery was already processed |
-| `concurrency` | an execution this rule started for this pull request is still running |
-| `dispatch_rate_limit` | the deployment is starting too many triggered runs per minute |
-
-A blocked event is not retried later. Different rules do not block each other
-on the same pull request.
-
-4. **Input mapping.** Each workflow input is read from a payload path, for
-   example `"pr_number": "pull_request.number"`. A path that resolves to
-   nothing is left out. An input named `repository` holding `owner/repo`
-   also becomes the repository the run checks out.
-
-## Principles
-
-- **Prefer a preset when one fits.** Presets carry a tested event, conditions,
-  input mapping and limits.
-- **The CLI registers the simple case.** `syn triggers register` sets the
-  event, repository, workflow, `eq` conditions, `max_attempts` and
-  `cooldown_seconds`. It sends no input mapping, a `daily_limit` of 20 and a
-  generated name. Anything more is the API.
-- **Pause before you delete.** Pausing keeps the rule and its history.
-- **Destructive commands need `--force`.** `syn triggers delete` and
-  `syn triggers disable-all` refuse without it.
-
 ## Anti-patterns
 
 - **The bare event name for an event with actions.** Register
@@ -120,111 +200,49 @@ on the same pull request.
 - **Reading inputs from the trigger history.** The history records the
   execution, not its inputs. The execution's `inputs` are in
   `GET /executions/{id}`.
+- **Deleting to silence a rule.** Delete cannot be undone from the product;
+  a paused rule can be resumed.
 
-## The procedure
+## Recommended tools and practices (as of 2026-10-04)
 
-### 1. Enable a preset
+### Outcome: every rule is armed deliberately
 
-```bash
-syn triggers enable self-healing -r owner/repo [-w <workflow-id>]
-```
+- **Presets.** Ladders up by supplying a tested event, conditions, input
+  mapping and limits in one command. Tradeoffs: without `-w` they dispatch
+  `self-heal-pr`.
+- **`POST /triggers` when input mapping is needed.** Ladders up because the
+  CLI sends no input mapping, and a rule without one fires runs with no
+  inputs and no repository. Tradeoffs: an API call, with the request shape
+  in [references/http-api.md](references/http-api.md).
+- **`syn triggers show` after every register.** Ladders up by reading back
+  what was actually stored.
 
-| preset | event | fires when | inputs mapped | limits |
-|---|---|---|---|---|
-| `self-healing` | `check_run.completed` | the check failed and belongs to a pull request | `repository`, `pr_number`, `branch`, `check_name`, `check_output_title`, `check_output_summary`, `check_html_url` | 3 attempts, 20 a day, 300 s cooldown |
-| `review-fix` | `pull_request_review.submitted` | the review requested changes or commented, on a non-draft pull request | `repository`, `pr_number`, `branch`, `review_body`, `reviewer`, `review_html_url` | 2 attempts, 10 a day, 600 s cooldown |
-| `comment-command` | `issue_comment.created` | a pull request comment contains `/syn` | `repository`, `pr_number`, `pr_title`, `comment_body`, `comment_author`, `comment_id`, `comment_html_url` | 5 attempts, 30 a day, 60 s cooldown |
+### Outcome: a fire or a non-fire is explained from the history
 
-Without `-w`, a preset dispatches the deployment's `self-heal-pr` workflow.
-Enabling the same preset twice on a repository is refused.
+- **`syn triggers history`.** Ladders up by recording every decision with its
+  guard and reason. Tradeoffs: it records the execution, not its inputs.
+- **`GET /executions/{id}` for the fired run's `inputs`.** Ladders up by
+  showing which mapped input was empty.
 
-### 2. Register a rule
+### Outcome: a noisy rule is disarmed, not deleted, while it is understood
 
-The simple case, from the CLI:
-
-```bash
-syn triggers register -r owner/repo -w <workflow-id> -e pull_request.opened \
-  -c pull_request.base.ref=main --max-attempts 3 --cooldown 300
-```
-
-`-c field=value` repeats, and each is an `eq` condition. `--max-attempts`
-defaults to 5 and `--cooldown` to 300 seconds.
-
-With input mapping, other operators, a name or a different daily limit, use
-the API:
-
-```bash
-AUTH="Authorization: Bearer $SYN_API_TOKEN"
-API="$SYN_API_URL/api/v1"
-curl -sf -H "$AUTH" -H "Content-Type: application/json" -X POST "$API/triggers" -d '{
-  "name": "review-new-prs",
-  "event": "pull_request.opened",
-  "repository": "owner/repo",
-  "workflow_id": "<workflow-id>",
-  "conditions": [
-    {"field": "pull_request.draft", "operator": "eq", "value": "false"},
-    {"field": "pull_request.base.ref", "operator": "eq", "value": "main"}
-  ],
-  "input_mapping": {
-    "repository": "repository.full_name",
-    "pr_number": "pull_request.number",
-    "branch": "pull_request.head.ref"
-  },
-  "config": {"max_attempts": 3, "daily_limit": 20, "cooldown_seconds": 300}
-}'
-```
-
-Then read it back:
-
-```bash
-syn triggers show <trigger-id>
-syn triggers list -r owner/repo        # -s active|paused|deleted, -a includes deleted
-```
-
-### 3. Why didn't it fire?
-
-```bash
-syn triggers history <trigger-id>      # -n, default 20
-```
-
-- **A `blocked` entry** names the guard and the reason. `conditions_not_met`
-  means the payload did not match: compare the conditions in
-  `syn triggers show` with the event's payload.
-- **No entry at all** means no event reached this rule. Check the rule's event
-  spelling (`<event>.<action>`), its repository (`owner/repo`), that it is
-  `active`, and whether its event arrives without webhooks (anti-patterns
-  above).
-
-### 4. Why did it fire and do nothing?
-
-The history's execution id is the run. Read it with the execution-control
-skill. Then read its `inputs` (`GET /executions/{id}`) against the inputs the
-workflow needs: a missing input is a missing or wrong `input_mapping` path.
-
-### 5. Stop a rule
-
-```bash
-syn triggers pause <trigger-id>
-syn triggers resume <trigger-id>
-syn triggers disable-all -r owner/repo --force   # pauses every active rule on the repository
-syn triggers delete <trigger-id> --force         # permanent
-```
-
-`disable-all` pauses; resume rules one by one.
-
-## Recommended tools and practices (as of 2026-10-03)
-
-| endpoint | does |
-|---|---|
-| `POST /triggers` | register: `name`, `event`, `repository`, `workflow_id`, `conditions[]` (`field`, `operator`, `value` as a string), `input_mapping`, `config` (`max_attempts` default 3, `daily_limit` 20, `cooldown_seconds` 300) |
-| `POST /triggers/presets/{preset_name}` | enable a preset: `repository`, optional `workflow_id` |
-| `GET /triggers` | list; params `repository`, `status` |
-| `GET /triggers/{id}` | `name`, `event`, `repository`, `workflow_id`, `status`, `fire_count`, `conditions`, `input_mapping`, `config`, `last_fired_at` |
-| `GET /triggers/{id}/history` | `entries[]`: `fired_at`, `execution_id`, `event_type`, `pr_number`, `status`, `cost_usd`, `guard_name`, `block_reason`; param `limit` |
-| `PATCH /triggers/{id}` | `{"action": "pause", "reason": "..."}` or `{"action": "resume"}` |
-| `DELETE /triggers/{id}` | delete |
-
-The API accepts a `reason` when pausing; the CLI does not send one.
+- **`syn triggers pause` and `disable-all --force`.** Ladders up by stopping
+  fires while keeping the rule and its history. The API also accepts a
+  `reason` when pausing; the CLI does not send one.
 
 Run `syn triggers <subcommand> --help` for the flags of the installed CLI
 version.
+
+## References
+
+- [references/guards-and-presets.md](references/guards-and-presets.md): what
+  each safety guard blocks, and each preset's event, condition, inputs and
+  limits. Read when a rule is blocked or when choosing a preset.
+- [references/http-api.md](references/http-api.md): every trigger route, and
+  a complete `POST /triggers` body with conditions and input mapping. Read
+  when the CLI's simple case is not enough.
+
+## Continual improvement
+
+File drift, gaps, or proposed updates at
+https://github.com/syntropic137/syntropic137-skills/issues
