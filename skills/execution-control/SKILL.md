@@ -28,7 +28,7 @@ the execution before acting on it, and read it again after.**
 
 - You are choosing a workflow or starting a run: use syn-workflow.
 - You already know the session and want its tool timeline, token and cache
-  breakdown, or cost by model: use observing-sessions. Step 6 hands off there.
+  breakdown, or cost by model: use observing-sessions. Step 7 hands off there.
 - You need every session of a run, including delegates: use
   discovering-run-sessions.
 - You want patterns across many finished runs: use mining-session-logs.
@@ -93,9 +93,15 @@ reports two outcome lines beside it:
    **Resume start** block when this execution has been resumed; the
    repositories; a phases table (number, name, status marked `(recovered)`
    when the deliverable was salvaged, model, start time, tokens, cost, side
-   effects); and a session inventory summary with its coverage. The phases
-   table does **not** show a phase's error message, its session id, or its
-   artifact id. Those are in the API response (step 6).
+   effects), each failed phase's classification and error below the table;
+   and a session inventory summary with its coverage. A phase's session id
+   and artifact id are not shown; they are in the API response (step 7).
+
+   An execution that was accepted but has not started shows a **Queue** line,
+   for example `queued 2 of 3 (4/4 running)`: the deployment runs a fixed
+   number of executions at once and this one is waiting for a slot. Read
+   that line before concluding a run is lost or stuck, and do not start it
+   again: the copy queues behind it.
 
 4. Follow it live, if it is running:
 
@@ -115,13 +121,28 @@ reports two outcome lines beside it:
    syn control status <execution-id>                # id and state only
    ```
 
-   Both refuse without `--force`, a deliberate pause to check the id. Cancel
-   is accepted only while the execution is `running`. Acceptance queues the
-   cancellation; the running agent is interrupted as its output is processed,
-   so it is not instantaneous. Re-read with `syn execution show` until the
-   status is `cancelled`.
+   Both refuse without `--force`, a deliberate pause to check the id. What
+   a cancel does depends on where the execution is:
 
-6. If it failed, diagnose it before acting. Work down this list and stop when
+   - **queued, not yet started:** the start is withdrawn and the run never
+     begins;
+   - **running:** the cancellation is queued and the agent is interrupted as
+     its output is processed, so it is not instantaneous.
+
+   The CLI prints "Cancel signal sent" in both cases; only its `Message:`
+   line says which happened. Judge the outcome with `syn execution show`,
+   not the cancel response: re-read until the status is `cancelled` or the
+   Queue line is gone.
+
+6. Read what the run delivered, whatever its status. `completed` and
+   `failed` describe the harness: the phases ended, or one did not. They do
+   not say whether the work is right. Read the last phase's reported result
+   (its artifact, step 7, item 5) and the pull request or other output it
+   names. A phase that refused a false premise, or reported that it delivered part
+   of the task and named the rest, did its job; count that as a correct
+   outcome, not a failure to retry.
+
+7. If it failed, diagnose it before acting. Work down this list and stop when
    the cause is clear:
    1. **The execution's outcome.** In `syn execution show`: the error, the
       Deliverable and Side effects lines, and which phase is `failed`.
@@ -148,18 +169,19 @@ reports two outcome lines beside it:
    5. **The output.** `syn artifacts show <artifact-id>` or
       `syn artifacts content <artifact-id>`.
 
-7. Decide from what step 6 found:
+8. Decide from what step 7 found:
 
    | finding | do |
    |---|---|
    | `platform` failure, the phase never really ran | resume |
-   | `task` failure: wrong instructions, missing input, the agent could not do it | fix the task or inputs and start a new run with syn-workflow; resume repeats the same instructions |
+   | `task` failure: wrong instructions, a wrong premise, scope too large for one phase, missing input | fix the task or inputs and start a new run with syn-workflow; resume replays the same task text and fails the same way |
    | `correct_refusal` or `refused` | the agent was right to stop; change what was asked, not how often |
    | `reported_side_effects` is `denied` | read the actual refusal first (the phase error and session): `denied` also covers a protected branch or a read-only token, not only a missing App permission. Fix that cause, then resume with `--acknowledge-external-effects` if the phase must run again |
    | deliverable produced, status failed | read the artifact before re-running anything |
+   | the implementation pushed a pull request, then the verification phase died | start a workflow whose only phase verifies an existing pull request, pointed at that PR, rather than resuming a run that would implement again |
    | cause still unclear | report the execution id, the failing phase, its error, and its session id to the deployment's operator rather than retrying |
 
-8. Resume it, if step 7 says so. Resuming keeps the phases that already
+9. Resume it, if step 8 says so. Resuming keeps the phases that already
    completed; a fresh `syn workflow run` pays for them again:
 
    ```bash
@@ -184,21 +206,21 @@ reports two outcome lines beside it:
    `--acknowledge-external-effects`. Check the failed phase's side effects
    (step 3) before you pass it.
 
-9. Confirm the resume. On success the CLI prints the parent, the **new
-   execution id**, the phase it resumes at, and the phases not re-run. The
-   resume is accepted before the new execution starts. Read the **parent**
-   with `syn execution show` to see its `Resume start` block: its status
-   (`pending`, `paused`, `retryable`, `dispatched`, `started` or `failed`),
-   attempts against the maximum, and a reason when the start has stalled or
-   failed. Then follow the new execution from step 3. If it also fails,
-   resume the new execution, not the original.
+10. Confirm the resume. On success the CLI prints the parent, the **new
+    execution id**, the phase it resumes at, and the phases not re-run. The
+    resume is accepted before the new execution starts. Read the **parent**
+    with `syn execution show` to see its `Resume start` block: its status
+    (`pending`, `paused`, `retryable`, `dispatched`, `started` or `failed`),
+    attempts against the maximum, and a reason when the start has stalled or
+    failed. Then follow the new execution from step 3. If it also fails,
+    resume the new execution, not the original.
 
 ## Output
 
 - The execution's recorded state: status, failing phase and its error,
   Deliverable and Side effects, reported to the caller.
 - For a failure: a named attribution (task, platform, correct refusal, or a
-  missing permission) and the decision taken from the table in step 7, with
+  missing permission) and the decision taken from the table in step 8, with
   the evidence that made it.
 - After a cancel: the execution read back as `cancelled`.
 - After a resume: the new execution id, and its `Resume start` status read
@@ -216,7 +238,8 @@ reports two outcome lines beside it:
 ### Outcome 2: every control action is confirmed by its effect
 
 - *Signal:* after a cancel, the execution is read again until it shows
-  `cancelled`, rather than reported cancelled on the strength of the response.
+  `cancelled` (or, for a queued run, its Queue line is gone), rather than
+  reported cancelled on the strength of the response.
 - *Signal:* after a resume, the new execution id is reported and its start is
   checked.
 
@@ -226,11 +249,25 @@ reports two outcome lines beside it:
   correct refusal, or a permission the run did not have.
 - *Signal:* a run whose write-back was denied is answered by granting the
   permission, not by running the same thing again.
+- *Signal:* a refused premise or a reported partial delivery is recorded as
+  the agent behaving correctly, and the next run carries a changed task.
 
 ## Anti-patterns
 
 - **Re-running blind.** Starting the workflow again without reading the failed
   phase's error.
+- **Re-dispatching a queued run.** An execution with a Queue line in
+  `syn execution show` is waiting for a slot, not lost. Starting it again
+  adds a second copy behind it in the same queue.
+- **Reading the cancel response as the outcome.** It says "Cancel signal
+  sent" whether the run was withdrawn from the queue or is still being
+  interrupted. Observed 2026-10-05.
+- **Reading `completed` as "the work is right" or `failed` as "the work is
+  missing".** Runs observed 2026-10-04..06 completed with the agent reporting
+  a refused premise, and failed in verification after a correct pull request
+  was already open. The phase's reported result and the PR are the outcome.
+- **Resuming a task failure.** A run whose task was too large for one phase
+  timed out again on resume, because the resume replays the same task.
 - **Steering with `inject`.** `syn control inject` returns success and queues
   the message, but as of 2026-10-03 nothing delivers it to the running agent.
   The agent never sees it. To change what a run does, cancel it and start it
@@ -246,7 +283,7 @@ reports two outcome lines beside it:
   `max_budget_usd` field may still appear in old examples of the execute
   request; it is ignored.
 
-## Recommended tools and practices (as of 2026-10-04)
+## Recommended tools and practices (as of 2026-10-07)
 
 ### Outcome: every action is based on the execution's recorded state
 
@@ -254,8 +291,14 @@ reports two outcome lines beside it:
   Deliverable, Side effects and the phases on one screen. Tradeoffs: it omits
   phase errors, session ids and artifact ids.
 - **`GET /executions/{id}` for what `show` omits.** Ladders up by exposing
-  the per-phase error, session and artifact ids that step 6 needs. The full
+  the per-phase error, session and artifact ids that step 7 needs. The full
   route list is in [references/http-api.md](references/http-api.md).
+- **The Queue line before any "is it lost" conclusion.** Ladders up by
+  showing a run accepted but waiting for a slot, with its position and how
+  many are running. Tradeoffs: none.
+- **The last phase's reported result and the PR over the status.** Ladders
+  up because the status describes the harness and the result describes the
+  work. Tradeoffs: one more read per run.
 
 ### Outcome: every control action is confirmed by its effect
 
@@ -264,7 +307,7 @@ reports two outcome lines beside it:
   not instantaneous, so the re-read may need repeating.
 - **The parent's `Resume start` block.** Ladders up because the resume is
   accepted before the new execution starts, and this block is where a stalled
-  or failed start shows.
+  or failed start shows, including its own Queue line.
 
 ### Outcome: a failure is attributed before it is retried
 
@@ -274,6 +317,10 @@ reports two outcome lines beside it:
   [references/diagnosis-fields.md](references/diagnosis-fields.md).
 - **`syn sessions show` for `tool_blocked` operations.** Ladders up by
   locating the policy refusal behind a `denied` write-back.
+- **Resume for platform failures, a new run for task failures, a
+  verify-only run for a dead verification.** Ladders up by paying only for
+  the phase that needs to run again. Tradeoffs: a verify-only workflow must
+  be registered on the deployment (see syn-workflow).
 
 Run `syn execution <subcommand> --help` and `syn control <subcommand> --help`
 for the flags of the installed CLI version.
@@ -282,7 +329,7 @@ for the flags of the installed CLI version.
 
 - [references/diagnosis-fields.md](references/diagnosis-fields.md): every
   field of the execution detail used to attribute a failure, with its values.
-  Read during step 6.
+  Read during step 7.
 - [references/http-api.md](references/http-api.md): the HTTP routes behind
   the CLI, including cancel and resume bodies and the `inject` caveat. Read
   when you need structured output or the CLI is unavailable.

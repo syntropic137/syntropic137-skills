@@ -23,3 +23,20 @@ construction and cannot be made agent-agnostic by relocating them.
 When creating or editing a skill, use the `authoring-skills` skill:
 https://github.com/AgentParadise/agentic-skills/tree/main/skills/meta/authoring-skills
 It is the source of truth for skill shape; do not restate its rules here.
+
+## Keep the skills learning
+
+These skills carry what agents operating Syntropic137 have learned. When an
+agent learns a durable practice (a failure mode, a recovery that worked, a
+workflow design rule), add it to the skill that owns that concern, not a new
+one, and:
+
+- phrase it against the product surface: the `syn` command, API field or
+  output line an agent can check;
+- state the evidence kind and when it was seen (for example "an execution
+  that timed out in its first phase, observed 2026-10-05"), never a
+  repository path or issue number;
+- verify every command and flag against the current CLI before writing it;
+- update that skill's dated Recommended tools section.
+
+A practice seen once is an anecdote; write it down when a run outcome shows it.
