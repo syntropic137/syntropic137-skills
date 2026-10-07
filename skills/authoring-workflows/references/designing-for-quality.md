@@ -2,7 +2,7 @@
 
 A workflow that validates can still certify wrong work. These rules decide
 how often it does, and how you find out. They come from runs observed on a
-production deployment, 2026-10-04..06. Read this when deciding a workflow's
+production deployment, 2026-10-04..07. Read this when deciding a workflow's
 phases and models, or before changing a workflow, prompt or model that
 already works.
 
@@ -15,6 +15,16 @@ implementation, by setting that phase's `model` or its `agent` block
 (`provider: codex` against a claude implementation, or another model id).
 Different models miss different things, so the disagreements are where the
 defects are.
+
+"Different" means a different model family, not a smaller model from the
+same vendor. Cross the families in both directions: a Claude model (Opus)
+implements and a GPT model (GPT-6.1, through `provider: codex`) verifies, or
+GPT implements and Claude verifies. A Claude verifier on a Claude
+implementation is a same-family review; when a run relies on one, say so in
+its report rather than calling it cross-model. Observed 2026-10-07: in a
+verifier eval, Sonnet 5.5 certified two commits known to be buggy. Do not
+use it as a verifier until an eval shows it catches what the current
+verifier catches.
 
 Give the verification phase only the tools it needs, and ask it to paste
 the output of each check it ran, so its verdict is evidence rather than an
@@ -52,11 +62,28 @@ the full checks. Running heavy verification on light changes is where cost
 goes without finding anything. Keep a separate, lighter workflow for
 documentation changes rather than one workflow for everything.
 
-## Change models only on evidence
+## Change one variant at a time, on evidence
 
-A cheaper model is adopted for a phase only after an eval (below) shows the
-same quality on the same cases. A model that looks equivalent on one run
+A phase's behaviour is set by four things, and a **variant** is one choice
+of each:
+
+| part | where it is set |
+|---|---|
+| model | the phase's `model`, or its `agent` block |
+| prompt | the phase's prompt or `prompt_file` |
+| skills | the phase's pinned `skills` and `claude_plugins` |
+| tools | the phase's `allowed_tools` |
+
+Change one part per comparison, so a difference in results has one cause.
+A cheaper variant is adopted for a phase only after an eval (below) shows
+the same quality on the same cases. A model that looks equivalent on one run
 can certify defects the current one catches.
+
+Quality does not transfer across kinds of work. A variant that holds up on
+documentation can fail on code changes. Keep evals per **job type** (docs,
+editing, code change, rework of an earlier change, testing) and per
+**codebase**, tag them so (`--tag docs --tag <codebase>`), and adopt a
+variant only for the job types and codebases its evals cover.
 
 ## The learning loop: escaped bugs become eval cases
 
@@ -72,7 +99,29 @@ syn eval create --name "escaped: retry double-send" \
 ```
 
 `syn eval create` pins each `--repo` ref to a commit SHA. The goal states the
-finding a correct verification must report.
+finding a correct verification must report. Add a `--tag` for the job type
+and one for the codebase, so the eval is found when a variant for that kind
+of work is compared.
+
+### Clean controls
+
+Escaped bugs alone reward a verifier that blocks everything: it "finds"
+every defect and scores 100%. Add, for each escaped-bug eval, a clean
+control: a certified change with no known defect, pinned the same way, with
+the goal "Verification certifies the change". Report two numbers: defects
+caught, and clean changes wrongly blocked. A variant that raises the first
+by raising the second is not better.
+
+### The eval environment must match the one being judged
+
+An eval measures its environment as much as its subject. Observed
+2026-10-07: a prompt comparison scored 1 of 6 against 0 of 4 because the
+eval runs had no network access to the package index; the verifier blocked
+on failed installs, and the scores measured the sandbox, not the prompt.
+Give eval runs what production runs have for the thing being measured
+(network, credential scope, repositories). Score a run that failed for an
+environment reason as an error, excluded from the comparison, never as a
+failed case.
 
 Before adopting a change to a workflow, a phase prompt or a model, run the
 candidate against every escaped-bug eval, and compare with the current
@@ -88,7 +137,7 @@ syn eval show <eval-id>                 # goal, baseline, and a tally of run sta
 The run status tally is not the score: read each run's reported result (see
 execution-control) and decide whether it reported the expected finding.
 Adopt the change only when it finds at least what the current workflow
-finds. An execution started without `--eval` can be added later with
+finds and blocks no more clean controls. An execution started without `--eval` can be added later with
 `syn eval attach <execution-id> <eval-id>`.
 
 ## Keep a scorecard

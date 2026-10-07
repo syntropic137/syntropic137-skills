@@ -2,7 +2,7 @@
 
 The task (`-t`) is the only part of a run you write fresh each time, and it
 decides more outcomes than the workflow does. These rules come from runs
-observed on a production deployment, 2026-10-04..06. Read this before
+observed on a production deployment, 2026-10-04..07. Read this before
 writing a task for a multi-phase workflow, or before re-running a task that
 failed.
 
@@ -58,3 +58,34 @@ main"), not as background. An agent that finds the premise false and stops
 is behaving correctly: that outcome is worth more than a change built on a
 wrong premise. Read such a run's reported result before re-running anything
 (see execution-control).
+
+## Check the designs already written before briefing a design
+
+A task that asks for a design is checked against the target repository's
+existing plans, design records and open epics, and a premise phase refuses
+one that contradicts them. Observed 2026-10-07: three design tasks in one
+day were refused at premise because each contradicted a design already
+written. The refusal was correct and the run cost little; the miss was in
+the task. Read what the repository already decided, and either build on it
+or say in the task which decision this one replaces and why.
+
+## Declare every repository the change may touch
+
+The run's workspace credential is scoped to the repositories passed with
+`-R`. A change that turns out to need a second repository cannot clone or
+push it, and dead-ends. Observed 2026-10-07: a fix that needed a matching
+change in a dependency repository stopped there. Pass each repository the
+fix may reach:
+
+```bash
+syn workflow run <workflow-id> -R owner/app -R owner/dependency -t "..."
+```
+
+## Measure deployment data before the run, and paste it in
+
+A phase runs inside a workspace with no route to the deployment's API and
+no credentials for it, so it cannot read execution lists, costs or session
+data itself. Observed 2026-10-07: a run whose task depended on that data
+could not get it. Query it first (`syn execution list`, `syn execution
+show`, the costs API) and paste what the task needs into the task text, or
+do that part outside the run.

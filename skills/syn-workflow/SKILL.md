@@ -90,7 +90,10 @@ exists to make that impossible.
    the trap a previous run hit and the command that proves it was avoided;
    keep anything asked of a premise or check phase read-only; scope it to
    what one phase can finish, splitting an "every X" task into batches;
-   require pasted command output, not summaries. Each rule, with what was
+   require pasted command output, not summaries; check the repository's
+   existing designs before asking for one; pass with `-R` every repository
+   the change may touch; paste in any deployment data the run needs, since
+   a phase cannot query the deployment. Each rule, with what was
    observed when it was broken, is in
    [references/writing-tasks.md](references/writing-tasks.md).
 
@@ -120,7 +123,15 @@ exists to make that impossible.
    | `-R` given, but the workflow does not clone repos | warning: the repos will not be cloned |
 
    On success it prints `Execution ID: exec-...` and the deployment it ran
-   on. From here the run belongs to execution-control.
+   on. From here the run belongs to execution-control. Take the id from
+   that line, or from `syn execution list`, never by matching `exec-`
+   anywhere in the output: the output echoes the task, and a task that
+   mentions another execution's id yields the wrong one.
+
+   A start refused with HTTP 507 and "Refusing to start a new execution: the
+   workspace volume is nearly full" is the deployment's disk, not the
+   workflow or the task. Retrying does not help until space is freed; tell
+   whoever operates the deployment.
 
 7. To see a workflow's past runs, use `syn workflow status <workflow-id>`. It
    takes a workflow id, not an execution id.
@@ -222,6 +233,13 @@ exists to make that impossible.
 - **"Every X" in one task.** It grows past one phase's timeout, and a resume
   replays it unchanged. Split it into batches.
 - **Accepting "tests pass" as evidence.** Ask for the pasted output.
+- **Briefing a design without reading the designs already written.**
+  Observed 2026-10-07: three such tasks were refused at premise in one day.
+- **Passing only the repository the change starts in.** The workspace
+  credential covers only `-R` repositories; a fix that needs another one
+  dead-ends.
+- **Asking a run to look up deployment data.** A phase has no route to the
+  deployment's API. Measure first and paste the data into the task.
 - **Answering a provenance refusal with `--force`.** It does not bypass that
   refusal, and the refusal is correct.
 
@@ -244,7 +262,8 @@ exists to make that impossible.
 - **The task-writing rules in
   [references/writing-tasks.md](references/writing-tasks.md).** Ladders up
   because a task that names its trap and its proving command, stays inside
-  one phase, and asks for pasted output is the cheapest fix for a run that
+  one phase, asks for pasted output, declares every repository it may touch
+  and carries the deployment data it needs is the cheapest fix for a run that
   failed for task reasons. Tradeoffs: a longer task; it is cheaper than a
   second run.
 - **`syn workflow list` to find what the deployment can run, not
