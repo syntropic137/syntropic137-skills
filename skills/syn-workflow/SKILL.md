@@ -1,6 +1,6 @@
 ---
 name: syn-workflow
-description: Use when operating Syntropic137 workflow templates through the `syn` CLI - finding which workflows a deployment can run, reading a workflow's phases and declared inputs, starting a run with the right task, inputs and repositories, validating a workflow YAML or package, registering or updating a workflow, archiving one, or listing a workflow's past runs. Trigger phrases include "run a workflow", "start a syn workflow", "what workflows are installed", "what inputs does this workflow take", "register this workflow", "install a workflow package", "update the workflow in place", "refusing to overwrite recorded provenance", "is already installed", "task would be discarded", "delete a workflow", "syn workflow". Do NOT use for watching, cancelling, resuming or diagnosing an execution that has already started (use execution-control), for designing or writing a workflow's YAML, phases or prompts (use authoring-workflows), for browsing, installing from or publishing to a marketplace (use workflow-marketplace), or for reviewing what a batch of finished runs teaches (use mining-session-logs).
+description: Use when operating Syntropic137 workflow templates through the `syn` CLI - finding which workflows a deployment can run, reading a workflow's phases and declared inputs, starting a run with the right task, inputs and repositories, validating a workflow YAML or package, registering or updating a workflow, archiving one, or listing a workflow's past runs. Trigger phrases include "run a workflow", "start a syn workflow", "write the task", "the run timed out in its first phase", "what workflows are installed", "what inputs does this workflow take", "register this workflow", "install a workflow package", "update the workflow in place", "refusing to overwrite recorded provenance", "is already installed", "task would be discarded", "delete a workflow", "syn workflow". Do NOT use for watching, cancelling, resuming or diagnosing an execution that has already started (use execution-control), for designing or writing a workflow's YAML, phases or prompts (use authoring-workflows), for browsing, installing from or publishing to a marketplace (use workflow-marketplace), or for reviewing what a batch of finished runs teaches (use mining-session-logs).
 ---
 
 # Operating Syntropic137 workflows
@@ -86,14 +86,22 @@ exists to make that impossible.
    and default. An input that is required and has no default must be
    supplied.
 
-4. Rehearse the run whenever the inputs are not obviously right. `--dry-run`
-   runs every local check in step 5 and stops before anything is dispatched:
+4. Write the task so a phase can finish it and a reader can check it. Name
+   the trap a previous run hit and the command that proves it was avoided;
+   keep anything asked of a premise or check phase read-only; scope it to
+   what one phase can finish, splitting an "every X" task into batches;
+   require pasted command output, not summaries. Each rule, with what was
+   observed when it was broken, is in
+   [references/writing-tasks.md](references/writing-tasks.md).
+
+5. Rehearse the run whenever the inputs are not obviously right. `--dry-run`
+   runs every local check in step 6 and stops before anything is dispatched:
 
    ```bash
    syn workflow run <workflow-id> -t "Fix the auth timeout" -R owner/repo --dry-run
    ```
 
-5. Run it, and read every warning, because the CLI warns only when something
+6. Run it, and read every warning, because the CLI warns only when something
    you typed will not reach the agent:
 
    ```bash
@@ -114,10 +122,10 @@ exists to make that impossible.
    On success it prints `Execution ID: exec-...` and the deployment it ran
    on. From here the run belongs to execution-control.
 
-6. To see a workflow's past runs, use `syn workflow status <workflow-id>`. It
+7. To see a workflow's past runs, use `syn workflow status <workflow-id>`. It
    takes a workflow id, not an execution id.
 
-7. To register a definition, validate it with
+8. To register a definition, validate it with
    `syn workflow validate ./my-workflow.yaml` (a single file) or
    `syn workflow validate ./my-package/` (a package directory), then register
    it by what you have:
@@ -133,7 +141,7 @@ exists to make that impossible.
    Flag details for `create` and `install` are in
    [references/registering-and-updating.md](references/registering-and-updating.md).
 
-8. To update a workflow in place, re-register it the same way it was first
+9. To update a workflow in place, re-register it the same way it was first
    registered, because `create --from` and `install` record different
    provenance:
    - first registered with `create --from`: re-run the same `create --from`;
@@ -149,7 +157,7 @@ exists to make that impossible.
    [references/registering-and-updating.md](references/registering-and-updating.md)
    before reaching for `--force`.
 
-9. To archive or remove:
+10. To archive or remove:
 
    ```bash
    syn workflow delete <workflow-id> --force          # archive (soft delete)
@@ -179,6 +187,8 @@ exists to make that impossible.
   consumes the task.
 - *Signal:* the run command produced no warnings, or each warning was read
   and accepted on purpose.
+- *Signal:* the task names the check that proves it was done, asks for
+  pasted output, and fits in one phase.
 
 ### Outcome 2: a changed workflow updates in place
 
@@ -206,10 +216,16 @@ exists to make that impossible.
 - **Passing an execution id to `syn workflow status`.** It takes a workflow
   id and lists that workflow's runs. For one execution, use
   `syn execution show <execution-id>` (see execution-control).
+- **Opening a task with build or test steps.** Observed 2026-10-04..06:
+  the first phase, meant to check the premise, did the implementation work
+  instead and timed out.
+- **"Every X" in one task.** It grows past one phase's timeout, and a resume
+  replays it unchanged. Split it into batches.
+- **Accepting "tests pass" as evidence.** Ask for the pasted output.
 - **Answering a provenance refusal with `--force`.** It does not bypass that
   refusal, and the refusal is correct.
 
-## Recommended tools and practices (as of 2026-10-04)
+## Recommended tools and practices (as of 2026-10-07)
 
 ### Outcome: the run that starts is the run that was asked for
 
@@ -225,13 +241,19 @@ exists to make that impossible.
   `POST` will start a run whose task or inputs are discarded without warning.
   Tradeoffs: when structured output is needed, use the HTTP surface in
   [references/http-api.md](references/http-api.md), after a dry run.
+- **The task-writing rules in
+  [references/writing-tasks.md](references/writing-tasks.md).** Ladders up
+  because a task that names its trap and its proving command, stays inside
+  one phase, and asks for pasted output is the cheapest fix for a run that
+  failed for task reasons. Tradeoffs: a longer task; it is cheaper than a
+  second run.
 - **`syn workflow list` to find what the deployment can run, not
   `syn workflow search` or `syn workflow info`.** Ladders up because those two
   search configured marketplaces, not the deployment.
 
 ### Outcome: a changed workflow updates in place
 
-- **The registration-path table in step 7 and the refusal table in
+- **The registration-path table in step 8 and the refusal table in
   [references/registering-and-updating.md](references/registering-and-updating.md).**
   Ladders up by mapping each refusal message to the registration path that
   answers it. Tradeoffs: the refusal texts are matched on substrings and will
@@ -247,6 +269,10 @@ exists to make that impossible.
 
 ## References
 
+- [references/writing-tasks.md](references/writing-tasks.md): the
+  task-writing rules with what was observed when each was broken. Read
+  before writing a task for a multi-phase workflow, or re-running one that
+  failed.
 - [references/registering-and-updating.md](references/registering-and-updating.md):
   `create` and `install` flags, and every provenance refusal with what it
   means. Read when registering or when an update is refused.
