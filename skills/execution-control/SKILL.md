@@ -131,8 +131,12 @@ reports two outcome lines beside it:
 
    The CLI prints "Cancel signal sent" in both cases; only its `Message:`
    line says which happened. Judge the outcome with `syn execution show`,
-   not the cancel response: re-read until the status is `cancelled` or the
-   Queue line is gone.
+   not the cancel response: re-read until the status is `cancelled`. A
+   withdrawn start also reads as `cancelled`. A Queue line that has
+   disappeared is not proof: it also goes when a slot opens and the run
+   starts. If the run now shows as running rather than `cancelled`, it
+   started before the withdrawal landed; cancel it again as a running
+   execution and re-read until it is `cancelled`.
 
 6. Read what the run delivered, whatever its status. `completed` and
    `failed` describe the harness: the phases ended, or one did not. They do
@@ -178,7 +182,7 @@ reports two outcome lines beside it:
    | `correct_refusal` or `refused` | the agent was right to stop; change what was asked, not how often |
    | `reported_side_effects` is `denied` | read the actual refusal first (the phase error and session): `denied` also covers a protected branch or a read-only token, not only a missing App permission. Fix that cause, then resume with `--acknowledge-external-effects` if the phase must run again |
    | deliverable produced, status failed | read the artifact before re-running anything |
-   | the implementation pushed a pull request, then the verification phase died | start a workflow whose only phase verifies an existing pull request, pointed at that PR, rather than resuming a run that would implement again |
+   | the implementation pushed a pull request, then the verification phase died | resume if the implementation phase completed: completed phases are inherited, not rerun. Start a workflow whose only phase verifies an existing pull request, pointed at that PR, when the run cannot be resumed or its implementation phase did not complete (a resume would retry it), or when the PR needs an independent check |
    | cause still unclear | report the execution id, the failing phase, its error, and its session id to the deployment's operator rather than retrying |
 
 9. Resume it, if step 8 says so. Resuming keeps the phases that already
@@ -238,8 +242,8 @@ reports two outcome lines beside it:
 ### Outcome 2: every control action is confirmed by its effect
 
 - *Signal:* after a cancel, the execution is read again until it shows
-  `cancelled` (or, for a queued run, its Queue line is gone), rather than
-  reported cancelled on the strength of the response.
+  `cancelled`, for a queued run as for a running one, rather than reported
+  cancelled on the strength of the response or a vanished Queue line.
 - *Signal:* after a resume, the new execution id is reported and its start is
   checked.
 
