@@ -294,10 +294,11 @@ reports two outcome lines beside it:
 ### Outcome: every action is based on the execution's recorded state
 
 - **`syn execution show` as the first read.** Ladders up by putting status,
-  Deliverable, Side effects and the phases on one screen. Tradeoffs: it omits
-  phase errors, session ids and artifact ids.
+  Deliverable, Side effects, the phases and each failed phase's
+  classification and error on one screen. Tradeoffs: it omits session ids
+  and artifact ids.
 - **`GET /executions/{id}` for what `show` omits.** Ladders up by exposing
-  the per-phase error, session and artifact ids that step 7 needs. The full
+  the per-phase session and artifact ids that step 7 needs. The full
   route list is in [references/http-api.md](references/http-api.md).
 - **The Queue line before any "is it lost" conclusion.** Ladders up by
   showing a run accepted but waiting for a slot, with its position and how
