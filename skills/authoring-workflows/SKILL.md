@@ -1,6 +1,6 @@
 ---
 name: authoring-workflows
-description: Use when writing or changing a Syntropic137 workflow definition - the workflow YAML, its phases, phase prompts, declared inputs, the agent block (claude or codex), tool restrictions, prompt files and shared phase libraries, or scaffolding a new workflow package. Trigger phrases include "write a workflow", "write a workflow yaml", "create a workflow YAML", "add a phase", "workflow schema", "what keys does a phase take", "prompt_file", "prompt_template", "phase-library", "shared://", "$ARGUMENTS", "{{task}}", "{{repo_url}}", "pass output between phases", "declare a workflow input", "allowed_tools", "use codex for a phase", "requires_repos", "syn workflow init", "extra inputs are not permitted", "unknown tool". Do NOT use for running, registering or updating a workflow you already have (use syn-workflow), for browsing or publishing a marketplace (use workflow-marketplace), or for diagnosing a run that already started (use execution-control).
+description: Use when writing or changing a Syntropic137 workflow definition - the workflow YAML, its phases, phase prompts, declared inputs, the agent block (claude or codex), tool restrictions, prompt files and shared phase libraries, or scaffolding a new workflow package. Trigger phrases include "write a workflow", "write a workflow yaml", "create a workflow YAML", "add a phase", "workflow schema", "what keys does a phase take", "prompt_file", "prompt_template", "phase-library", "shared://", "$ARGUMENTS", "{{task}}", "{{repo_url}}", "pass output between phases", "declare a workflow input", "allowed_tools", "use codex for a phase", "requires_repos", "syn workflow init", "add a verification phase", "which model should verify", "cross-model verification", "escaped bug", "eval a workflow change", "compare workflow variants", "extra inputs are not permitted", "unknown tool". Do NOT use for running, registering or updating a workflow you already have (use syn-workflow), for browsing or publishing a marketplace (use workflow-marketplace), or for diagnosing a run that already started (use execution-control).
 ---
 
 # Authoring Syntropic137 workflows
@@ -122,18 +122,28 @@ three traps, summarised under Anti-patterns and explained in
    frontmatter, pinned `claude_plugins` and `skills`, and every placeholder
    are in [references/schema.md](references/schema.md).
 
-9. Validate, then rehearse the install:
+9. Design for correct work, not only valid YAML: put verification in its
+   own phase on a model from a different family than the implementation,
+   bound repair rounds to a fixed number of verify and fix phases, and scale
+   verification to what the change can break. Before changing a workflow's
+   model, prompt, skills or tools, change one of them and run the candidate
+   against the escaped-bug evals and clean controls for that job type and
+   codebase. Each rule, with how to express it in the schema and the eval
+   commands, is in
+   [references/designing-for-quality.md](references/designing-for-quality.md).
 
-   ```bash
-   syn workflow validate ./pr-review/workflow.yaml    # a self contained file
-   syn workflow validate ./pr-review/                 # a package: resolves prompt_file, then validates
-   syn workflow install ./pr-review/ --dry-run
-   ```
+10. Validate, then rehearse the install:
 
-   Read every warning. A definition that uses `prompt_file` must be
-   registered as a package with `syn workflow install`, because
-   `syn workflow create --from` sends one file and cannot resolve the
-   references. Registering, updating and running are covered by syn-workflow.
+    ```bash
+    syn workflow validate ./pr-review/workflow.yaml    # a self contained file
+    syn workflow validate ./pr-review/                 # a package: resolves prompt_file, then validates
+    syn workflow install ./pr-review/ --dry-run
+    ```
+
+    Read every warning. A definition that uses `prompt_file` must be
+    registered as a package with `syn workflow install`, because
+    `syn workflow create --from` sends one file and cannot resolve the
+    references. Registering, updating and running are covered by syn-workflow.
 
 ## Output
 
@@ -160,7 +170,16 @@ three traps, summarised under Anti-patterns and explained in
 - *Signal:* `syn workflow run <id> ... --dry-run` with representative
   arguments prints no "discarded" warning or refusal.
 
-### Outcome 3: the template is reusable
+### Outcome 3: the workflow certifies only correct work
+
+- *Signal:* verification runs in its own phase, on a model from a different
+  family than the implementation, within a fixed number of repair rounds.
+- *Signal:* every escaped bug has an eval pinned to the commit before its
+  fix, alongside clean controls, tagged by job type and codebase; a changed
+  model, prompt, skill set or tool list ran against them before it was
+  adopted.
+
+### Outcome 4: the template is reusable
 
 - *Signal:* no task text and no repository name is hardcoded in a prompt.
   The task arrives as `$ARGUMENTS`, the repository as `{{repo_url}}`.
@@ -186,10 +205,30 @@ three traps, summarised under Anti-patterns and explained in
   with `timeout_seconds`.
 - **Adding `can_open_pr`.** It is retired: accepted, dropped, and reported
   as a notice. It controls nothing.
+- **Letting the implementing model verify its own work.** It re-reads its
+  own reasoning and agrees with it. Cross-model review is the practice that
+  held up on production runs, 2026-10-04..06.
+- **One verification pass with no repair round, or a loop with no
+  maximum.** The first leaves found defects in place; the second spends
+  without converging.
+- **Full test-suite verification on a documentation change.** It costs a
+  full run and finds nothing the text review would not.
+- **Switching a phase to a cheaper model on the strength of one good
+  run.** Adopt it after it matches on the escaped-bug evals.
+- **A smaller model from the implementer's own vendor as the verifier.**
+  It is not a cross-model review. Observed 2026-10-07: Sonnet 5.5 certified
+  two known-buggy commits in a verifier eval.
+- **Changing the model, prompt, skills and tools in one comparison.** A
+  difference in results then has no single cause.
+- **Escaped-bug evals with no clean controls.** A verifier that blocks
+  everything scores 100% on them.
+- **Eval runs in an environment production does not have.** Observed
+  2026-10-07: no package-index network made the verifier block on failed
+  installs, and the comparison measured the sandbox.
 - **Writing `sandbox: read-only`.** It is refused at authoring. Use
   `workspace-write` to keep a codex phase inside its workspace.
 
-## Recommended tools and practices (as of 2026-10-04)
+## Recommended tools and practices (as of 2026-10-07)
 
 ### Outcome: the definition validates on the deployment that will run it
 
@@ -217,6 +256,25 @@ three traps, summarised under Anti-patterns and explained in
   (discarded task, discarded input, uncloned repos) without spending a run.
   Tradeoffs: it needs the workflow registered first (see syn-workflow).
 
+### Outcome: the workflow certifies only correct work
+
+- **A verification phase with its own `model` or `agent` block, crossing
+  model families (Opus implements and GPT-6.1 verifies, or the reverse).**
+  Ladders up because a different model family reads the change without the
+  implementer's reasoning. Tradeoffs: a second harness or model to configure
+  and pay for.
+- **Fixed verify and fix phases, two or three rounds.** Ladders up by
+  fixing what verification finds, at a bounded cost. Tradeoffs: a round with
+  nothing to fix still starts a phase.
+- **`syn eval create --repo owner/repo@<commit-before-fix>` per escaped bug,
+  and `syn workflow run ... --eval <eval-id>` for candidates.** Ladders up by
+  turning every known miss into a regression check. Tradeoffs: the run
+  status tally is not a score; each run's result is read by hand.
+- **A clean control per escaped-bug eval, and `--tag` for job type and
+  codebase on both.** Ladders up by measuring false blocks as well as
+  catches, for the kind of work the variant will do. Tradeoffs: twice the
+  eval runs per comparison.
+
 ### Outcome: the template is reusable
 
 - **Prompt files over long inline strings.** A package with `phases/*.md`
@@ -241,6 +299,11 @@ three traps, summarised under Anti-patterns and explained in
   warns about discarded or uncloned values, or `allowed_tools` is rejected.
 - [references/example.md](references/example.md): a complete two-phase
   definition with what each choice shows. Read for a shape to copy.
+- [references/designing-for-quality.md](references/designing-for-quality.md):
+  cross-family verification, bounded repair rounds, scaling verification,
+  variants and evals per job type and codebase, escaped bugs and clean
+  controls, eval environments, and the scorecard. Read when choosing phases and
+  models, or before changing a workflow that already works.
 - [references/http-api.md](references/http-api.md): validating a single file
   over HTTP. Read when you need structured output or the CLI is unavailable.
 

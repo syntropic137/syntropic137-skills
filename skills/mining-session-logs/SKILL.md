@@ -96,7 +96,12 @@ skill is a written artifact and a set of filed actions, not a summary.**
    section for what you could not determine.
 
 9. **File the actions.** Each finding becomes an issue with a reproduction, a
-   prompt or skill change, or a recorded decision not to act. This is the step
+   prompt or skill change, or a recorded decision not to act. A bug that
+   verification certified and that surfaced later also becomes an eval case
+   pinned to the commit before its fix (see authoring-workflows), so the
+   next workflow change is tested against it. A durable practice the batch
+   shows (a failure mode, a recovery that worked) goes into the skill that
+   owns that concern. This is the step
    that is easiest to skip and the one that decides whether the exercise was
    worth its cost.
 
@@ -163,7 +168,7 @@ skill is a written artifact and a set of filed actions, not a summary.**
 - **A retrospective with no actions.** Everything is described, nothing is filed,
   and the behaviour is unchanged next month.
 
-## Recommended tools and practices (as of 2026-10-04)
+## Recommended tools and practices (as of 2026-10-07)
 
 ### Outcome: the lesson outlives the runs
 
@@ -185,6 +190,11 @@ skill is a written artifact and a set of filed actions, not a summary.**
 - **Spend attributed per failure class, from `total_cost_usd` and
   `phases[].cost_usd`.** Ladders up by ranking findings by what fixing them is
   worth, so the first issue filed is the expensive one.
+- **`syn eval create --repo owner/repo@<commit-before-fix>` for each escaped
+  bug.** Ladders up because a bug the workflow is known to miss becomes a
+  case every later workflow change is run against. Tradeoffs: the expected
+  finding must be written as the eval's goal, by hand. Details in
+  authoring-workflows.
 
 ### Outcome: the numbers survive scrutiny
 
