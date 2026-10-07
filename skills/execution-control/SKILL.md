@@ -261,13 +261,15 @@ reports two outcome lines beside it:
   adds a second copy behind it in the same queue.
 - **Reading the cancel response as the outcome.** It says "Cancel signal
   sent" whether the run was withdrawn from the queue or is still being
-  interrupted. Observed 2026-10-05.
+  interrupted.
 - **Reading `completed` as "the work is right" or `failed` as "the work is
-  missing".** Runs observed 2026-10-04..06 completed with the agent reporting
-  a refused premise, and failed in verification after a correct pull request
-  was already open. The phase's reported result and the PR are the outcome.
-- **Resuming a task failure.** A run whose task was too large for one phase
-  timed out again on resume, because the resume replays the same task.
+  missing".** On runs observed 2026-10-04..06, an agent refusing a false
+  premise and a run dying in verification after its pull request was open
+  both looked wrong by status alone. The phase's reported result and the PR
+  are the outcome.
+- **Resuming a task failure.** A resume replays the same task text, so a
+  task too large for one phase, or built on a wrong premise, fails the same
+  way again.
 - **Steering with `inject`.** `syn control inject` returns success and queues
   the message, but as of 2026-10-03 nothing delivers it to the running agent.
   The agent never sees it. To change what a run does, cancel it and start it
