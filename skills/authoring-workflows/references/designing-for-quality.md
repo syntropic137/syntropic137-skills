@@ -16,9 +16,13 @@ implementation, by setting that phase's `model` or its `agent` block
 Different models miss different things, so the disagreements are where the
 defects are.
 
-Give the verification phase read-only tools where it only needs to read
-(`allowed_tools: [Read, Grep, Glob, Bash]`), and ask it to paste the output
-of each check it ran, so its verdict is evidence rather than an opinion.
+Give the verification phase only the tools it needs, and ask it to paste
+the output of each check it ran, so its verdict is evidence rather than an
+opinion. `allowed_tools: [Read, Grep, Glob]` is read-only. A verifier that
+must run checks needs `Bash`, and `[Read, Grep, Glob, Bash]` is **not**
+read-only: through the shell the phase can write files, commit, push and
+reach the network. With `Bash`, the prompt is what keeps the phase from
+changing anything, so say in it that the phase changes nothing.
 
 ## Bounded repair rounds
 
