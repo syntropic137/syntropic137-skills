@@ -1,6 +1,8 @@
 ---
 name: workflow-marketplace
 description: Use when finding, reviewing, installing, updating or publishing Syntropic137 workflow packages through a marketplace - registering a marketplace repository, searching it by keyword, category or tag, reading a package's details, reviewing a package for security before installing it, installing or upgrading by name, or exporting a deployed workflow and publishing it as a marketplace. Trigger phrases include "syn marketplace add", "browse the marketplace", "search for a workflow", "find a code review workflow", "install from the marketplace", "install a workflow from the marketplace", "is this workflow safe to install", "review this plugin before installing", "publish my workflow", "share a workflow", "export a workflow", "marketplace.json", "syn workflow search", "syn workflow info". Do NOT use for running, validating or registering a workflow you already have locally (use syn-workflow), for writing a workflow's YAML or phase prompts (use authoring-workflows), or for watching a run (use execution-control).
+metadata:
+  version: "1.0.0"
 ---
 
 # Syntropic137 workflow marketplaces

@@ -1,6 +1,8 @@
 ---
 name: syn-workflow
 description: Use when operating Syntropic137 workflow templates through the `syn` CLI - finding which workflows a deployment can run, reading a workflow's phases and declared inputs, starting a run with the right task, inputs and repositories, validating a workflow YAML or package, registering or updating a workflow, archiving one, or listing a workflow's past runs. Trigger phrases include "run a workflow", "start a syn workflow", "write the task", "rewrite the task after execution-control traced a first-phase timeout to its scope", "what workflows are installed", "what inputs does this workflow take", "register this workflow", "install a workflow package", "update the workflow in place", "refusing to overwrite recorded provenance", "is already installed", "task would be discarded", "delete a workflow", "syn workflow". Do NOT use for watching, cancelling, resuming or diagnosing an execution that has already started (use execution-control), for designing or writing a workflow's YAML, phases or prompts (use authoring-workflows), for browsing, installing from or publishing to a marketplace (use workflow-marketplace), or for reviewing what a batch of finished runs teaches (use mining-session-logs).
+metadata:
+  version: "1.1.0"
 ---
 
 # Operating Syntropic137 workflows

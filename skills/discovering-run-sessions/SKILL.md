@@ -1,6 +1,8 @@
 ---
 name: discovering-run-sessions
 description: Use when you need every agent session of one Syntropic137 workflow run - not just the platform sessions but the delegates agents started inside their workspaces and the native transcripts each harness recorded - with how they relate, which failed or never launched, whether the list is known to be complete, and the transcripts themselves. Trigger phrases include "all sessions of exec-...", "find every session of this execution", "how many agents ran", "what did the delegates do", "which sub-agent failed", "did every delegate finish", "pull the transcripts of this run", "is the session list complete", "coverage reconciled", "session inventory", "syn execution sessions", "syn execution transcript". Do NOT use for what one platform session cost or which tools it called (use observing-sessions), for cancelling, resuming or diagnosing an execution's phases (use execution-control), or for lessons across many finished runs (use mining-session-logs).
+metadata:
+  version: "1.0.0"
 ---
 
 # Discovering every session of a Syntropic137 run

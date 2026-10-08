@@ -21,6 +21,12 @@ project. `-a` accepts `claude-code`, `codex`, `gemini-cli` and ~70 others, and t
 same skill body serves every one of them. Verified with `skills` 1.7.0:
 `claude-code` lands in `.claude/skills/`, `codex` in `.agents/skills/`.
 
+Pin a release to make the install reproducible and upgrade on purpose:
+`npx skills add syntropic137/syntropic137-skills#v1.1.0 --skill <skill-name> ...`.
+Without `#<tag>` you track `main`, and `skills update` brings whatever changed.
+Releases and per-skill versions are listed in [CHANGELOG.md](CHANGELOG.md);
+each skill states its own in `metadata.version`.
+
 Syntropic137 workspaces use the same CLI, pointed at a local copy of the skill
 (`skills add <path-to-skill> --agent <agent> -y`).
 

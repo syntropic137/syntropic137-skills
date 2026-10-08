@@ -1,6 +1,8 @@
 ---
 name: observing-sessions
 description: Use when working out what a Syntropic137 agent session did, why it cost what it cost, or why one known session failed - its operations log, tool timeline, token and cache breakdown, cost by model, tool and phase, and platform-wide cost and activity. Trigger phrases include "why was this run expensive", "why did this session cost so much", "what did the agent do", "what did the agent do in this phase", "show the tool calls", "token usage of this session", "cache hit rate", "cost breakdown", "which phase cost the most", "why did this session fail", "cost shows unpriced", "syn sessions", "syn observe", "syn costs", "syn metrics", "syn insights". Do NOT use as the first stop for "why did my run fail" or "why did the workflow or execution fail" - the execution's failing phase, failure classification, cancel and resume belong to execution-control, which hands over here once the failing session is known. Do NOT use for listing every session of a run including delegates and native transcripts (use discovering-run-sessions), or for lessons across many finished runs (use mining-session-logs).
+metadata:
+  version: "1.0.0"
 ---
 
 # Observing Syntropic137 sessions and costs
