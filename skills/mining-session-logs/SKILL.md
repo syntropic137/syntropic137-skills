@@ -1,6 +1,8 @@
 ---
 name: mining-session-logs
 description: Use when turning finished agent runs into written lessons - reviewing session logs or transcripts across a batch of runs, auditing where executions fail, finding recurring mistakes or wasted effort, attributing spend to failure classes, or writing a retrospective. Trigger phrases include "what did we learn from these runs", "review the session logs", "mine the transcripts", "why do executions keep failing", "where is the money going", "write a retrospective", "find repeated mistakes", "audit the last N runs". Do NOT use for why one specific execution failed (use execution-control), for what one session did or cost (use observing-sessions), for collecting every session of one run (use discovering-run-sessions), for live monitoring of a run in progress (use execution-control), or for deciding whether a single pull request is correct.
+metadata:
+  version: "1.1.0"
 ---
 
 # Mining session logs into lessons

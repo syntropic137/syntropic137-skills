@@ -1,6 +1,8 @@
 ---
 name: github-triggers
 description: Use when making a Syntropic137 workflow run automatically on GitHub events, or managing the trigger rules that do so - registering a rule or enabling a built-in preset, choosing its event, conditions, input mapping and safety limits, pausing, resuming or deleting rules, and working out why a trigger did or did not fire. Trigger phrases include "run this workflow on every PR", "set up a trigger on PR merge", "auto-fix failing CI", "self-healing", "respond to review comments", "/syn comment command", "set up a trigger", "why didn't my trigger fire", "trigger fired too often", "pause the trigger", "stop all triggers on this repo", "trigger history", "syn triggers". Do NOT use for starting a workflow by hand (use syn-workflow), for following or cancelling the executions a trigger started (use execution-control), or for installing the GitHub App or exposing a webhook URL, which is deployment setup rather than product use.
+metadata:
+  version: "1.0.0"
 ---
 
 # Running Syntropic137 workflows from GitHub events

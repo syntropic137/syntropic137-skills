@@ -1,6 +1,8 @@
 ---
 name: authoring-workflows
 description: Use when writing or changing a Syntropic137 workflow definition - the workflow YAML, its phases, phase prompts, declared inputs, the agent block (claude or codex), tool restrictions, prompt files and shared phase libraries, or scaffolding a new workflow package. Trigger phrases include "write a workflow", "write a workflow yaml", "create a workflow YAML", "add a phase", "workflow schema", "what keys does a phase take", "prompt_file", "prompt_template", "phase-library", "shared://", "$ARGUMENTS", "{{task}}", "{{repo_url}}", "pass output between phases", "declare a workflow input", "allowed_tools", "use codex for a phase", "requires_repos", "syn workflow init", "add a verification phase", "which model should verify", "cross-model verification", "escaped bug", "eval a workflow change", "compare workflow variants", "extra inputs are not permitted", "unknown tool". Do NOT use for running, registering or updating a workflow you already have (use syn-workflow), for browsing or publishing a marketplace (use workflow-marketplace), or for diagnosing a run that already started (use execution-control).
+metadata:
+  version: "1.1.0"
 ---
 
 # Authoring Syntropic137 workflows

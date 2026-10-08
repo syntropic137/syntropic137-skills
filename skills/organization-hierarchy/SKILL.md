@@ -1,6 +1,8 @@
 ---
 name: organization-hierarchy
 description: Use when organising repositories in a Syntropic137 deployment into organizations and systems, or reading health, cost and activity rolled up by repo or system - creating an organization, grouping repos into a system, registering a repository, assigning or moving a repo between systems, or asking which system is failing or costing the most. Trigger phrases include "create an organization", "syn org", "create a system", "group these repos", "register a repo", "syn repo register", "assign repo to system", "move repo to another system", "unassign repo", "system health", "system cost", "which repo is failing", "cost by repo", "repo activity", "what repos can the GitHub App see". Do NOT use for running workflows (use syn-workflow), for setting up trigger rules on a repo (use github-triggers), for installing or configuring the GitHub App itself, or for the cost and token breakdown of one execution or session (use observing-sessions).
+metadata:
+  version: "1.0.0"
 ---
 
 # Organising repositories in Syntropic137
