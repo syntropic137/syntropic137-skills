@@ -115,12 +115,27 @@ def check(
     return problems
 
 
+# Git pathspecs and `rev:path` are relative to the working directory, so every
+# git call runs from the repository root: run from scripts/ and a pathspec of
+# `skills` would match nothing and the check would silently pass.
+def repo_root() -> Path:
+    """The top of the repository the caller is in, whatever subdirectory that is."""
+    out = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"], check=True, capture_output=True, text=True
+    ).stdout
+    return Path(out.strip())
+
+
 def git(*args: str) -> str:
-    return subprocess.run(["git", *args], check=True, capture_output=True, text=True).stdout
+    return subprocess.run(
+        ["git", *args], check=True, capture_output=True, text=True, cwd=repo_root()
+    ).stdout
 
 
 def git_show(rev: str, path: str) -> str | None:
-    result = subprocess.run(["git", "show", f"{rev}:{path}"], capture_output=True, text=True)
+    result = subprocess.run(
+        ["git", "show", f"{rev}:{path}"], capture_output=True, text=True, cwd=repo_root()
+    )
     return result.stdout if result.returncode == 0 else None
 
 

@@ -121,6 +121,14 @@ class MainTest(unittest.TestCase):
         with (self.repo / "CHANGELOG.md").open("a") as f:
             f.write("".join(f"{line}\n" for line in lines))
 
+    def test_an_unbumped_change_fails_even_when_run_from_a_subdirectory(self) -> None:
+        # git pathspecs are relative to the working directory; run from
+        # scripts/, `-- skills` matched nothing and the check passed (#7 review).
+        (self.repo / "scripts").mkdir()
+        os.chdir(self.repo / "scripts")
+        (self.repo / "skills/a/references/r.md").write_text("changed\n")
+        self.assertEqual(self.run_main()[0], 1)
+
     def test_unchanged_passes(self) -> None:
         self.assertEqual(self.run_main()[0], 0)
 
