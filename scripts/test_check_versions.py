@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
+import os
+import shutil
+import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 
-from check_versions import check, read_version
+from check_versions import check, main, read_version
 
 
 def skill_md(version_line: str | None) -> str:
@@ -71,6 +78,103 @@ class CheckTest(unittest.TestCase):
             with self.subTest(line=line):
                 problems = check({"s": skill_md(line)}, {}, set(), "", "")
                 self.assertIn("quoted", problems[0].message)
+
+
+    def test_removed_skill_needs_next_major_entry(self) -> None:
+        self.assertIn("removed", check({}, {"s": V110}, set(), "", "")[0].message)
+        self.assertEqual(len(check({}, {"s": V110}, set(), "- `s` 1.2.0: x\n", "")), 1)
+        self.assertEqual(check({}, {"s": V110}, set(), "- `s` 2.0.0: removed\n", ""), [])
+
+
+def _git(repo: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false", *args],
+        cwd=repo, check=True, capture_output=True,
+    )
+
+
+class MainTest(unittest.TestCase):
+    """Runs main() against a real git repository, so the base is discovered as in CI."""
+
+    def setUp(self) -> None:
+        self.repo = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.repo)
+        for name in ("a", "b"):
+            (self.repo / "skills" / name / "references").mkdir(parents=True)
+            (self.repo / "skills" / name / "SKILL.md").write_text(V100)
+            (self.repo / "skills" / name / "references" / "r.md").write_text("ref\n")
+        (self.repo / "CHANGELOG.md").write_text("# Changelog\n\n## [Unreleased]\n")
+        _git(self.repo, "init", "-q", "-b", "main")
+        _git(self.repo, "add", ".")
+        _git(self.repo, "commit", "-q", "-m", "base")
+        cwd = os.getcwd()
+        os.chdir(self.repo)
+        self.addCleanup(os.chdir, cwd)
+
+    def run_main(self) -> tuple[int, str]:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = main(["check_versions.py", "HEAD"])
+        return code, out.getvalue()
+
+    def add_entries(self, *lines: str) -> None:
+        with (self.repo / "CHANGELOG.md").open("a") as f:
+            f.write("".join(f"{line}\n" for line in lines))
+
+    def test_unchanged_passes(self) -> None:
+        self.assertEqual(self.run_main()[0], 0)
+
+    def test_reference_change_bumped_with_entry_passes(self) -> None:
+        (self.repo / "skills/a/references/r.md").write_text("changed\n")
+        (self.repo / "skills/a/SKILL.md").write_text(V110)
+        self.add_entries("- `a` 1.1.0: x")
+        self.assertEqual(self.run_main(), (0, "OK 2 skills versioned; 1 changed and 0 removed since HEAD, all bumped and in CHANGELOG.md\n"))
+
+    def test_reference_change_without_bump_fails(self) -> None:
+        (self.repo / "skills/a/references/r.md").write_text("changed\n")
+        code, out = self.run_main()
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL a: changed", out)
+
+    def test_deleted_manifest_fails_without_entry(self) -> None:
+        (self.repo / "skills/b/SKILL.md").unlink()
+        code, out = self.run_main()
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL b: skills/b/SKILL.md was removed", out)
+
+    def test_deleted_folder_fails_without_entry(self) -> None:
+        shutil.rmtree(self.repo / "skills/b")
+        code, out = self.run_main()
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL b: skills/b/SKILL.md was removed", out)
+
+    def test_deleted_folder_with_major_entry_passes(self) -> None:
+        shutil.rmtree(self.repo / "skills/b")
+        self.add_entries("### Removed", "- `b` 2.0.0: removed")
+        self.assertEqual(self.run_main(), (0, "OK 1 skills versioned; 0 changed and 1 removed since HEAD, all bumped and in CHANGELOG.md\n"))
+
+    def test_committed_deletion_fails_without_entry(self) -> None:
+        _git(self.repo, "checkout", "-q", "-b", "topic")
+        _git(self.repo, "rm", "-q", "-r", "skills/b")
+        _git(self.repo, "commit", "-q", "-m", "drop b")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = main(["check_versions.py", "main"])
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL b:", out.getvalue())
+
+    def test_rename_needs_both_entries(self) -> None:
+        _git(self.repo, "mv", "skills/b", "skills/c")
+        code, out = self.run_main()
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL b: skills/b/SKILL.md was removed", out)
+        self.assertIn("FAIL c: changed to 1.0.0", out)
+        self.add_entries("- `c` 1.0.0: renamed from `b`")
+        code, out = self.run_main()
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL b:", out)
+        self.add_entries("- `b` 2.0.0: renamed to `c`")
+        self.assertEqual(self.run_main()[0], 0)
 
 
 if __name__ == "__main__":

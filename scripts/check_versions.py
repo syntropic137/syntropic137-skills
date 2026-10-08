@@ -10,7 +10,10 @@ the merge base of BASE_REF and HEAD and fails when:
 - a SKILL.md has no `metadata.version`, or it is not a quoted semver string;
 - any file under skills/<name>/ changed but that skill's version did not go up;
 - a changed skill's new version has no CHANGELOG.md line of the form
-  "- `<name>` <version>: ..." that was not already on the base.
+  "- `<name>` <version>: ..." that was not already on the base;
+- a skill on the base has no SKILL.md any more (removed, renamed, or its
+  manifest deleted) and CHANGELOG.md gains no line for it at the next MAJOR
+  version of its base version, "- `<name>` <MAJOR+1>.0.0: ...".
 
 A change anywhere in the skill folder counts, because that is what the
 `skills` CLI hashes to decide a skill changed. Standard library only.
@@ -78,9 +81,21 @@ def check(
     changelog: str,
     base_changelog: str,
 ) -> list[Problem]:
-    """current/base map skill name -> SKILL.md text; changed_skills are folders that differ."""
+    """current/base map skill name -> SKILL.md text; changed_skills are folders that differ.
+
+    base holds every skill on the base, so a skill missing from current was
+    removed or renamed, and still has to be released.
+    """
     problems: list[Problem] = []
     new_entries = changelog_entries(changelog) - changelog_entries(base_changelog)
+    for skill in sorted(set(base) - set(current)):
+        base_version = read_version(base[skill])
+        if base_version and SEMVER.match(base_version):
+            expected = f"{semver_key(base_version)[0] + 1}.0.0"
+            if (skill, expected) not in new_entries:
+                problems.append(Problem(skill, f"skills/{skill}/SKILL.md was removed or renamed, but CHANGELOG.md gains no line starting \"- `{skill}` {expected}:\" (removal is a MAJOR change)"))
+        elif not any(name == skill for name, _ in new_entries):
+            problems.append(Problem(skill, f"skills/{skill}/SKILL.md was removed or renamed, but CHANGELOG.md gains no line for `{skill}`"))
     for skill in sorted(current):
         version = read_version(current[skill])
         if version is None:
@@ -115,14 +130,17 @@ def main(argv: list[str]) -> int:
     merge_base = git("merge-base", base_ref, "HEAD").strip()
 
     current = {p.parent.name: p.read_text() for p in sorted((root / "skills").glob("*/SKILL.md"))}
+    # The base's skills come from the base tree, not from what survives here,
+    # so a deleted manifest or folder is still checked.
     base: dict[str, str] = {}
-    for skill in current:
-        text = git_show(merge_base, f"skills/{skill}/SKILL.md")
-        if text is not None:
-            base[skill] = text
+    for path in git("ls-tree", "-r", "--name-only", "--full-tree", merge_base, "--", "skills").splitlines():
+        parts = path.split("/")
+        if len(parts) == 3 and parts[2] == "SKILL.md":
+            base[parts[1]] = git_show(merge_base, path) or ""
 
     # Committed and uncommitted changes, so the check works before a commit too.
-    changed_paths = git("diff", "--name-only", merge_base, "--", "skills").splitlines()
+    # --no-renames keeps both sides of a move.
+    changed_paths = git("diff", "--name-only", "--no-renames", merge_base, "--", "skills").splitlines()
     changed_paths += git("ls-files", "--others", "--exclude-standard", "--", "skills").splitlines()
     changed_skills = {path.split("/")[1] for path in changed_paths if path.count("/") >= 2}
 
@@ -136,7 +154,11 @@ def main(argv: list[str]) -> int:
     if problems:
         print(f"\n{len(problems)} problem(s). See 'Versioning' in AGENTS.md.")
         return 1
-    print(f"OK {len(current)} skills versioned; {len(changed_skills & set(current))} changed since {base_ref}, all bumped and in CHANGELOG.md")
+    removed = set(base) - set(current)
+    print(
+        f"OK {len(current)} skills versioned; {len(changed_skills & set(current))} changed and {len(removed)} removed "
+        f"since {base_ref}, all bumped and in CHANGELOG.md"
+    )
     return 0
 
 
