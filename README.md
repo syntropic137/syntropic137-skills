@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="Syntropic137 Skills" width="100%">
+</p>
+
 # syntropic137-skills
 
 Harness-agnostic skills for agents **using** a deployed Syntropic137 instance.
