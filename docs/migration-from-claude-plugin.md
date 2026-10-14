@@ -14,6 +14,26 @@ for `syn-workflow` and `execution-control`, and at
 and at `8901e12c1294be75d8cd7e9e71af57859789475b` for `workflow-marketplace`,
 `organization-hierarchy` and `authoring-workflows`.
 
+Everything below records what was true at those commits. The product has
+changed since, and the skills have been corrected to match. Where this
+document and a skill disagree, the skill is current:
+
+- `syn workflow run` gives no `requires_repos` warning. Repositories passed
+  with `-R` are cloned whatever `requires_repos` says; `requires_repos: false`
+  drops only the workflow's own default repositories.
+- A workflow whose prompts read the task, run with no task, is refused (CLI
+  error, API 422) unless it declares `task` with `required: false`; only then
+  does it dispatch with `$ARGUMENTS` empty.
+- `GET /workflows` takes `search`, a case-insensitive substring of the name
+  or id. (`q`, below, is still not a parameter.)
+- The parent's `Resume start` status can also be `withdrawn`.
+- A `completed` execution whose last review verdict was `blocked` at the
+  repair limit can be resumed, at that round's fix.
+- There is a spend limit: a phase's `max_cost_usd` stops a claude phase once
+  it has spent more, and fails it resumably. `syn workflow run` still has no
+  budget flag and `max_budget_usd` in the execute request is still ignored.
+- The diagnostic flow is `execution-control` Workflow step 7, not step 6.
+
 ## Dispositions
 
 | disposition | meaning |
@@ -59,7 +79,7 @@ in the plugin repo; only those marked *verified* were checked in this PR.
 |---|---|---|---|
 | `commands/syn-run.md` | keep as harness adapter | `skills/syn-workflow` | Only exposes `--input`; add `-t`, `-R` and `--dry-run`, and stop passing repositories as inputs (*verified*: `repos` and `repository` are rejected as input keys). |
 | `commands/syn-workflows.md` | keep as harness adapter | `skills/syn-workflow` | Maps `search` to `syn workflow search`, which searches marketplaces, not the deployment; its fallback `GET /workflows?q=` has no such parameter (*verified*). |
-| `commands/syn-executions.md` | keep as harness adapter | `skills/execution-control` | Maps `status <id>` to `syn workflow status <id>`, which takes a workflow id, not an execution id; its fallback `/api/v1/executions/<id>/status` does not exist (*verified*). Use `syn execution show` or `/executions/<id>/state`. |
+| `commands/syn-executions.md` | keep as harness adapter | `skills/execution-control` | Maps `status <id>` to `syn workflow status <id>`, which takes a workflow id, not an execution id; its fallback, a `status` route under `/executions/<id>`, does not exist (*verified*). Use `syn execution show` or `/executions/<id>/state`. |
 | `commands/syn-status.md` | keep as harness adapter | `skills/execution-control`, `skills/observing-sessions` | Not verified in this PR. |
 | `commands/syn-health.md` | keep as harness adapter | every skill's `## Input` and first `## Workflow` step (`syn health`) | Not verified in this PR. |
 | `commands/syn-sessions.md` | keep as harness adapter | `skills/observing-sessions` | The command itself was not verified; the stale items found in the observability skill below are likely to recur in it. |
@@ -192,7 +212,8 @@ Each of these was in the plugin source and would have been wrong if copied.
 8. `syn insights overview` described as calling `/organizations/overview` and
    showing executions and costs: it calls `/insights/overview` and shows
    systems, repos, unassigned repos and active executions.
-9. `syn artifacts content --raw`: no such flag.
+9. A `--raw` flag on `syn artifacts content`: no such flag; the command
+   takes only the artifact id.
 10. `syn sessions list --workflow` returning "most recent first": the order
     was not confirmed. Dropped.
 11. The two-lane architecture and event pipeline internals (hook watcher,
@@ -228,8 +249,8 @@ main. What changed:
 
 ### `github-triggers` (from `github-automation` and `syn-triggers`)
 
-1. `syn triggers register --name --event --repository --max-fires --budget`:
-   the flags are `-r/--repo`, `-w/--workflow`, `-e/--event`,
+1. The plugin's `--name`, `--event`, `--repository`, `--max-fires` and
+   `--budget` on `syn triggers register`: the flags are `-r/--repo`, `-w/--workflow`, `-e/--event`,
    `-c/--condition`, `--max-attempts` and `--cooldown`. There is no name,
    budget or max-fires flag; the CLI generates the name.
 2. `budget_per_trigger_usd` as a safety limit: no such field. A trigger has no
@@ -249,9 +270,9 @@ main. What changed:
 8. "Check `syn triggers history` for what was passed as inputs": history does
    not record inputs. They are the execution's `inputs` in
    `GET /executions/{id}`.
-9. `syn triggers pause <id> --reason`: the CLI has no `--reason`. The API's
+9. A `--reason` flag on `syn triggers pause <id>`: the CLI has none. The API's
    `PATCH /triggers/{id}` accepts one.
-10. `syn triggers list --repository` and `enable <name> --repository`: the flag
+10. `--repository` on `syn triggers list` and on `enable <name>`: the flag
     is `-r/--repo`.
 11. `curl -X DELETE http://localhost:8137/...` "if the CLI doesn't support
     delete": it does, with `--force`. Removed.
@@ -309,9 +330,10 @@ main. What changed:
 
 ### `organization-hierarchy` (from `organization` and `syn-repo`)
 
-1. `syn organization create`: the command group is `syn org`.
-2. `syn system create --organization`: the flag is `-o/--org`, and it is
-   required.
+1. The plugin's `organization` command group (`organization create`): the
+   group is `syn org`, as in `syn org create`.
+2. An `--organization` flag on `syn system create`: the flag is `-o/--org`,
+   and it is required.
 3. Repos auto-registered by the GitHub App on first webhook: not on main.
    Registration is explicit, through `syn repo register` (`POST /repos`).
 4. "Assigning an already assigned repo fails silently": it is refused with

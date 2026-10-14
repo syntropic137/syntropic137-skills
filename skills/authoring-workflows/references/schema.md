@@ -22,6 +22,8 @@ enforces, and any key not listed here is rejected.
 | `inputs` | no | see "Inputs" below |
 | `phases` | yes | at least one; ids unique, orders unique |
 | `claude_plugins`, `skills` | no | applied to every phase; see "Prompt files, plugins and skills" below |
+| `tags` | no | labels copied onto every execution launched from this workflow |
+| `default_eval_id` | no | the eval a run joins when its launch names none |
 
 ## Inputs
 
@@ -55,11 +57,14 @@ input names.
 | `execution_type` | `sequential` only (the default). `parallel` and `human_in_loop` are rejected |
 | `input_artifacts`, `output_artifacts` | named artifacts; each input must be an earlier phase's output or a workflow input name |
 | `timeout_seconds` | |
+| `max_cost_usd` | stops the phase once its agent has spent more than this many USD; the phase fails and stays resumable. Must be positive and finite. Rejected when the phase or its `fallback_agent` runs on codex, which reports usage only at the end of a run |
 | `allowed_tools` | a phase field, not an agent field. See [traps.md](traps.md), Trap 3 |
 | `model` | wins over `agent.model` |
 | `agent` | see "Agent block" below |
 | `clone_repos` | default true. `false` keeps the repository token and `{{repo_url}}` and skips only the checkout |
 | `delivers_repo_changes` | default true |
+| `requires_verdict` | default false. When true the phase must report a review verdict; one that reports none fails, resumably. Declare it on verify phases |
+| `fallback_agent` | `provider` (required, `claude` or `codex`) and `model`. The phase is re-run once on this agent when its primary provider had no capacity after every retry or its quota is spent |
 | `argument_hint` | a hint for the task text this phase expects |
 | `claude_plugins`, `skills` | applied to this phase only |
 
@@ -76,8 +81,11 @@ agent:
   allow_delegation: false
 ```
 
-The `agent` block takes only `provider`, `model`, `sandbox` and
-`allow_delegation`. Omit it for a claude phase on the default model.
+The `agent` block takes only `provider`, `model`, `sandbox`,
+`allow_delegation` and `require_delegation`. `require_delegation: true`
+completes the phase only once a delegate to the other harness reported
+success, and is rejected without `allow_delegation: true`. Omit the block for
+a claude phase on the default model.
 `provider: claude-interactive` is rejected. Claude ignores `sandbox`.
 `sandbox: read-only` is refused at authoring.
 

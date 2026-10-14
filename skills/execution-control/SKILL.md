@@ -2,7 +2,7 @@
 name: execution-control
 description: Use when handling a Syntropic137 workflow execution after it has started - checking its status and phases, following it live, cancelling or stopping it, resuming a failed, interrupted or cancelled run, or working out why it failed before deciding what to do next. This is the first stop for any "why did my run fail" question about an execution. Trigger phrases include "why did my run fail", "why did the workflow fail", "which phase failed", "check on my execution", "is the run done", "watch the execution", "cancel the run", "stop the execution", "resume the failed execution", "retry from the failed phase", "the run completed but nothing was pushed", "execution stuck", "run is queued", "cancel a queued run", "verification died on the PR", "syn execution", "syn control". Do NOT use for choosing or starting a workflow and its inputs (use syn-workflow), for steering a running agent with new instructions (not delivered as of 2026-10-03, see below), for session-level telemetry once the failing phase's session is known - its tool timeline, token and cache use, or what one session cost (use observing-sessions), or for patterns across many finished runs (use mining-session-logs).
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Controlling and diagnosing Syntropic137 executions
@@ -55,11 +55,13 @@ the execution before acting on it, and read it again after.**
 ## The state model
 
 ```
-not_started -> running -> completed
+not_started -> running -> completed    --+
                        -> failed       --+
                        -> interrupted  --+-- resume -> a NEW execution that
                        -> cancelled    --+   inherits the completed phases
-                                             (cancelled needs an override)
+                                             (cancelled needs an override;
+                                             completed only with unresolved
+                                             review findings, see step 9)
 ```
 
 There is no `paused` state and no pause command. Phases move through
@@ -87,7 +89,8 @@ reports two outcome lines beside it:
    syn workflow status <workflow-id>        # runs of one workflow
    ```
 
-   `--page` and `--page-size` (at most 100) page through long lists.
+   `--page` and `--page-size` (the API accepts at most 200) page through long
+   lists.
 
 3. Read it with `syn execution show <execution-id>`. This prints the status,
    start and completion times, total tokens and cost; the **Deliverable** and
@@ -200,7 +203,7 @@ reports two outcome lines beside it:
    |---|---|
    | `failed`, `interrupted` | yes |
    | `cancelled` | only with `--override-cancellation` |
-   | `completed` | no, nothing is left to run |
+   | `completed` | only when its last review verdict was `blocked` at the workflow's repair limit; it resumes at that round's fix. Otherwise no, nothing is left to run |
    | `running`, `not_started` | no |
    | already resumed once | no, the error names the execution it was resumed as; resume that one |
 
@@ -216,7 +219,8 @@ reports two outcome lines beside it:
     execution id**, the phase it resumes at, and the phases not re-run. The
     resume is accepted before the new execution starts. Read the **parent**
     with `syn execution show` to see its `Resume start` block: its status
-    (`pending`, `paused`, `retryable`, `dispatched`, `started` or `failed`),
+    (`pending`, `paused`, `retryable`, `dispatched`, `started`, `failed` or
+    `withdrawn`),
     attempts against the maximum, and a reason when the start has stalled or
     failed. Then follow the new execution from step 3. If it also fails,
     resume the new execution, not the original.
@@ -287,9 +291,12 @@ reports two outcome lines beside it:
   workflow id and lists its runs.
 - **Retrying a `denied` write-back.** The run did its work and was refused
   permission to publish it. Running again is refused again.
-- **Looking for a budget cap.** There is no per-execution spend limit flag. A
-  `max_budget_usd` field may still appear in old examples of the execute
-  request; it is ignored.
+- **Looking for a budget cap at run time.** `syn workflow run` has no spend
+  limit flag, and a `max_budget_usd` field in old examples of the execute
+  request is ignored. The only spend limit is a phase's `max_cost_usd` in the
+  workflow definition: on a claude phase it stops the agent once the phase
+  has spent more, and the phase fails, resumably. Codex phases cannot
+  declare it.
 
 ## Recommended tools and practices (as of 2026-10-07)
 
