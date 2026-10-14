@@ -208,7 +208,9 @@ reports two outcome lines beside it:
    | already resumed once | no, the error names the execution it was resumed as; resume that one |
 
    The new execution inherits the **unbroken run of completed phases from the
-   start** and re-runs from the first phase after it. A phase that completed
+   start** and re-runs from the first phase after it (for a `completed` run
+   resumed at its repair point, only the phases before that point are
+   inherited, and the phases from it on run again). A phase that completed
    after a failed one is not inherited and runs again. If the phase being
    resumed ever started, it may already have pushed, commented or published,
    and re-running it may do so twice; the API then requires
@@ -338,9 +340,11 @@ reports two outcome lines beside it:
   the phase that needs to run again. Tradeoffs: a verify-only workflow must
   be registered on the deployment (see syn-workflow).
 - **Resume a completed run whose last review verdict was blocked at the
-  repair limit.** Ladders up by running one more repair round on the same
-  run instead of starting over. Tradeoffs: it needs
-  `--acknowledge-external-effects`, because the run already pushed.
+  repair limit.** Ladders up by running one more repair round in a new
+  execution that inherits the phases before the repair point, instead of
+  starting over. Tradeoffs: when the repair phase had started, it may already
+  have pushed or commented, so the resume needs
+  `--acknowledge-external-effects`.
 - **A phase `max_cost_usd` in the workflow YAML as the only spend cap.**
   Ladders up because crossing it fails that claude phase, which can then be
   resumed. Tradeoffs: claude phases only; there is no run-level flag.

@@ -244,7 +244,7 @@ exists to make that impossible.
 - **Answering a provenance refusal with `--force`.** It does not bypass that
   refusal, and the refusal is correct.
 
-## Recommended tools and practices (as of 2026-10-07)
+## Recommended tools and practices (as of 2026-10-14)
 
 ### Outcome: the run that starts is the run that was asked for
 

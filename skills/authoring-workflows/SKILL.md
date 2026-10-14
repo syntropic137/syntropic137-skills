@@ -234,7 +234,7 @@ three traps, summarised under Anti-patterns and explained in
 - **Writing `sandbox: read-only`.** It is refused at authoring. Use
   `workspace-write` to keep a codex phase inside its workspace.
 
-## Recommended tools and practices (as of 2026-10-07)
+## Recommended tools and practices (as of 2026-10-14)
 
 ### Outcome: the definition validates on the deployment that will run it
 
