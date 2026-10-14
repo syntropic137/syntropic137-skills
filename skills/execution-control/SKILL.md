@@ -298,7 +298,7 @@ reports two outcome lines beside it:
   has spent more, and the phase fails, resumably. Codex phases cannot
   declare it.
 
-## Recommended tools and practices (as of 2026-10-07)
+## Recommended tools and practices (as of 2026-10-14)
 
 ### Outcome: every action is based on the execution's recorded state
 
@@ -337,6 +337,13 @@ reports two outcome lines beside it:
   verify-only run for a dead verification.** Ladders up by paying only for
   the phase that needs to run again. Tradeoffs: a verify-only workflow must
   be registered on the deployment (see syn-workflow).
+- **Resume a completed run whose last review verdict was blocked at the
+  repair limit.** Ladders up by running one more repair round on the same
+  run instead of starting over. Tradeoffs: it needs
+  `--acknowledge-external-effects`, because the run already pushed.
+- **A phase `max_cost_usd` in the workflow YAML as the only spend cap.**
+  Ladders up because crossing it fails that claude phase, which can then be
+  resumed. Tradeoffs: claude phases only; there is no run-level flag.
 
 Run `syn execution <subcommand> --help` and `syn control <subcommand> --help`
 for the flags of the installed CLI version.

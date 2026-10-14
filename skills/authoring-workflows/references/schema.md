@@ -23,7 +23,7 @@ enforces, and any key not listed here is rejected.
 | `phases` | yes | at least one; ids unique, orders unique |
 | `claude_plugins`, `skills` | no | applied to every phase; see "Prompt files, plugins and skills" below |
 | `tags` | no | labels copied onto every execution launched from this workflow |
-| `default_eval_id` | no | the eval a run joins when its launch names none |
+| `default_eval_id` | no | the eval a run joins when its launch names none, unless the launch opts out (`--no-eval`, or `no_eval: true` in the execute request) |
 
 ## Inputs
 
