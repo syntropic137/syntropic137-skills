@@ -18,7 +18,7 @@ curl -sf -H "$AUTH" -H "Content-Type: application/json" \
 
 | endpoint | notes |
 |---|---|
-| `GET /workflows` | query params `workflow_type`, `include_archived`, `page`, `page_size`, `order_by`. There is no free-text search parameter. Page with `page=N&page_size=100` until a page comes back short. |
+| `GET /workflows` | query params `workflow_type`, `include_archived`, `page`, `page_size`, `order_by`, `search` (case-insensitive substring of the name or id, applied before paging). Page with `page=N&page_size=100` until a page comes back short. |
 | `GET /workflows/{id}` | the detail `syn workflow show` reads, including `input_declarations` and `phases` |
 | `GET /workflows/{id}/runs` | the history `syn workflow status` reads |
 | `POST /workflows/{id}/execute` | body `inputs` (string to string), `task`, `repos`. Returns `execution_id`, `workflow_id`, `status` (`started`), `message`. |

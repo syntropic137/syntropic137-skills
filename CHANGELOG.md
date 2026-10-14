@@ -12,6 +12,23 @@ checks for that line.
 
 ## [Unreleased]
 
+### Changed
+
+- `authoring-workflows` 1.2.0: schema lists `max_cost_usd`, `requires_verdict`,
+  `fallback_agent`, `require_delegation`, `tags` and `default_eval_id`;
+  `requires_repos: false` drops only default repositories (`-R` is still
+  cloned, no CLI warning); a run of a task-reading workflow with no task is
+  refused unless `task` is optional; a phase may set neither prompt key.
+- `execution-control` 1.2.0: a completed run blocked at its repair limit is
+  resumable; phase `max_cost_usd` is the one spend limit; `--page-size` up to
+  200; `withdrawn` resume start status; diagnosis is step 7.
+
+### Fixed
+
+- `syn-workflow` 1.1.1: no `requires_repos` warning row; a consumed task with
+  none supplied is an error unless `task` is optional; dry run checks missing
+  required input; `GET /workflows` takes `search`.
+
 ## [1.1.0] - 2026-10-07
 
 ### Added

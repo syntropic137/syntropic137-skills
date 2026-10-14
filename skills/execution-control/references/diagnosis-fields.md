@@ -1,7 +1,7 @@
 # Execution detail fields used in diagnosis
 
 The fields of `GET /api/v1/executions/{id}` that attribute a failure, with
-their values and how to read them. Read this during step 6 of the workflow,
+their values and how to read them. Read this during step 7 of the workflow,
 after `syn execution show` has named the failing phase.
 
 ```bash

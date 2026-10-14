@@ -2,7 +2,7 @@
 name: authoring-workflows
 description: Use when writing or changing a Syntropic137 workflow definition - the workflow YAML, its phases, phase prompts, declared inputs, the agent block (claude or codex), tool restrictions, prompt files and shared phase libraries, or scaffolding a new workflow package. Trigger phrases include "write a workflow", "write a workflow yaml", "create a workflow YAML", "add a phase", "workflow schema", "what keys does a phase take", "prompt_file", "prompt_template", "phase-library", "shared://", "$ARGUMENTS", "{{task}}", "{{repo_url}}", "pass output between phases", "declare a workflow input", "allowed_tools", "use codex for a phase", "requires_repos", "syn workflow init", "add a verification phase", "which model should verify", "cross-model verification", "escaped bug", "eval a workflow change", "compare workflow variants", "extra inputs are not permitted", "unknown tool". Do NOT use for running, registering or updating a workflow you already have (use syn-workflow), for browsing or publishing a marketplace (use workflow-marketplace), or for diagnosing a run that already started (use execution-control).
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Authoring Syntropic137 workflows
@@ -103,14 +103,16 @@ three traps, summarised under Anti-patterns and explained in
    both are reserved, because repositories arrive with `-R`, not as inputs.
 
 6. Write each phase: `id`, `name` and a unique `order` are required, plus
-   exactly one of `prompt_template` (inline) or `prompt_file` (from a file).
+   one of `prompt_template` (inline) or `prompt_file` (from a file). Setting
+   both is rejected; a phase with neither validates but has no instructions.
    Put `allowed_tools` on the phase, not in its `agent:` block. Bound a phase
    with `timeout_seconds`. The phase key table is in
    [references/schema.md](references/schema.md).
 
 7. Choose the harness per phase with the `agent` block, which takes only
-   `provider` (`claude` by default, or `codex`), `model`, `sandbox` and
-   `allow_delegation`. Omit the block for a claude phase on the default model.
+   `provider` (`claude` by default, or `codex`), `model`, `sandbox`,
+   `allow_delegation` and `require_delegation`. Omit the block for a claude
+   phase on the default model.
 
 8. Wire the prompts so everything the caller supplies reaches one:
    - the task as `$ARGUMENTS` (or `{{task}}`) in the first phase's prompt, if
@@ -190,14 +192,16 @@ three traps, summarised under Anti-patterns and explained in
 
 - **A task workflow with no `$ARGUMENTS` in any prompt.** `-t` is then
   refused, because the task would be thrown away. Without `-t`, `-i task=` or
-  a `default`, a workflow that does read the task still dispatches with
+  a `default`, a workflow that does read the task is refused too, unless it
+  declares `task` with `required: false`; only then does it dispatch with
   `$ARGUMENTS` empty and `{{task}}` left as literal text. Trap 2 in
   [references/traps.md](references/traps.md).
 - **`allowed_tools` inside the `agent:` block.** Rejected: it is a phase
   field. Names outside the closed set, or any non-empty list on a codex
   phase, are rejected too. Trap 3 in [references/traps.md](references/traps.md).
-- **`requires_repos: false` on a workflow that needs a checkout.** `-R` is
-  then not cloned and the CLI warns "the repos will not be cloned". Trap 1 in
+- **`requires_repos: false` on a workflow that needs a checkout.** The
+  workflow's own default repositories are then dropped, so a run without
+  `-R` gets no checkout. Trap 1 in
   [references/traps.md](references/traps.md).
 - **Hardcoding the task or repo in a prompt.** The workflow then does one
   thing forever, and `-t` is refused.
@@ -230,7 +234,7 @@ three traps, summarised under Anti-patterns and explained in
 - **Writing `sandbox: read-only`.** It is refused at authoring. Use
   `workspace-write` to keep a codex phase inside its workspace.
 
-## Recommended tools and practices (as of 2026-10-07)
+## Recommended tools and practices (as of 2026-10-14)
 
 ### Outcome: the definition validates on the deployment that will run it
 
@@ -255,7 +259,8 @@ three traps, summarised under Anti-patterns and explained in
   refused or discarded at run time. Tradeoffs: none.
 - **`syn workflow run <id> ... --dry-run` with representative arguments
   after registering.** Ladders up by running the CLI's pre-dispatch checks
-  (discarded task, discarded input, uncloned repos) without spending a run.
+  (missing required input, discarded task, discarded input) without
+  spending a run.
   Tradeoffs: it needs the workflow registered first (see syn-workflow).
 
 ### Outcome: the workflow certifies only correct work
@@ -298,7 +303,8 @@ three traps, summarised under Anti-patterns and explained in
   skills, and the placeholder table. Read while writing the definition.
 - [references/traps.md](references/traps.md): the three traps
   (`requires_repos`, `$ARGUMENTS`, `allowed_tools`) in full. Read when a run
-  warns about discarded or uncloned values, or `allowed_tools` is rejected.
+  warns about discarded values, a run gets no checkout, or `allowed_tools`
+  is rejected.
 - [references/example.md](references/example.md): a complete two-phase
   definition with what each choice shows. Read for a shape to copy.
 - [references/designing-for-quality.md](references/designing-for-quality.md):

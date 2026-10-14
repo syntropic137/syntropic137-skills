@@ -2,7 +2,7 @@
 
 The three mistakes behind most definitions that validate but do not do what
 the author meant, or do not validate at all. Read this when a run warns that
-something "will be discarded" or "will not be cloned", when `-t` is refused,
+something "will be discarded", when a run gets no checkout, when `-t` is refused,
 or when an `allowed_tools` key is rejected.
 
 ## Trap 1: `requires_repos` and `-R`
@@ -12,8 +12,11 @@ a repository needs no setting; the caller passes the repository at run time
 with `-R owner/repo`, and phases read it as `{{repo_url}}`.
 
 Set `requires_repos: false` only for work that needs no checkout (research,
-summarising a URL). Then `-R` is not cloned: the CLI warns "the repos will
-not be cloned" and the repository is never checked out.
+summarising a URL). It drops only the workflow's own default repositories
+(`repository`, `repos`): a run without `-R` gets none. Repositories passed
+with `-R` are still cloned, with no warning. To skip the checkout for one
+phase while keeping the repository's token and `{{repo_url}}`, set
+`clone_repos: false` on that phase.
 
 Repositories are never inputs. Do not declare an input named `repos` or
 `repository`: both names are reserved and the definition is rejected.
@@ -29,8 +32,12 @@ Nothing else does: not another input, not a positional argument.
   take a task. `syn workflow run ... -t "..."` is then **refused**, because the
   task would be thrown away.
 - A workflow that consumes the task but is run without one (no `-t`, no
-  `-i task=`, no `default`) still dispatches; the CLI warns. `$ARGUMENTS`
-  renders empty and `{{task}}` is left in the prompt as literal text.
+  `-i task=`, no `default`) is refused: the CLI errors "Missing required
+  inputs" and the API answers 422. A prompt that reads the task makes `task`
+  required even when no input declares it. Only a workflow that declares
+  `task` with `required: false` dispatches without one; the CLI warns,
+  `$ARGUMENTS` renders empty and `{{task}}` is left in the prompt as literal
+  text.
 
 If the workflow is meant to take a task, put `$ARGUMENTS` in the first
 phase's prompt.
