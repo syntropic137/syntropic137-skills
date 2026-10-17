@@ -12,6 +12,12 @@ checks for that line.
 
 ## [Unreleased]
 
+### Added
+
+- `syntropic137-docs` 1.0.0: new skill. When an agent is unsure how Syntropic137
+  works, read the agent docs (`llms.md` index, per-page `.md`, `llms-full.md`)
+  instead of guessing.
+
 ### Changed
 
 - `authoring-workflows` 1.2.0: schema lists `max_cost_usd`, `requires_verdict`,
