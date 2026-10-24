@@ -68,8 +68,9 @@ input names.
 | `argument_hint` | a hint for the task text this phase expects |
 | `claude_plugins`, `skills` | applied to this phase only |
 
-Rejected keys: `max_tokens` (use `timeout_seconds`), and any key not listed.
-`can_open_pr` is accepted and dropped with a notice.
+Rejected keys: `max_tokens` (use `timeout_seconds`), `can_open_pr` (retired,
+syntropic137#1502: delete the line, the platform opens the PR host-side), and
+any key not listed.
 
 ## Agent block
 

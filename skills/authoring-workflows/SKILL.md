@@ -209,8 +209,10 @@ three traps, summarised under Anti-patterns and explained in
   discarded, with only a CLI warning to show for it.
 - **Using `max_tokens` to bound a phase.** It is rejected; bound a phase
   with `timeout_seconds`.
-- **Adding `can_open_pr`.** It is retired: accepted, dropped, and reported
-  as a notice. It controls nothing.
+- **Adding `can_open_pr`.** It is retired and refused: validate and
+  install fail with an error naming the phase (syntropic137#1502). To
+  migrate, delete the line; there is no replacement, and the platform opens
+  the PR host-side.
 - **Letting the implementing model verify its own work.** It re-reads its
   own reasoning and agrees with it. Cross-model review is the practice that
   held up on production runs, 2026-10-04..06.
